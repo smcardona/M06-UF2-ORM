@@ -4,42 +4,51 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
 public class GestioDBHR {
-    public static void main(String[] args) {
+//Com veurem, aquesta booleana controla si volem sortir de l'aplicació.
+    static boolean sortirapp = false;
+    static boolean DispOptions = true;
+        
+        public static void main(String[] args) {
+    
+            try (BufferedReader br1 = new BufferedReader(new InputStreamReader(System.in))) {
+    
+                try {
+                    // Carregar propietats des de l'arxiu
+                    Properties properties = new Properties();
+                    try (InputStream input = GestioDBHR.class.getClassLoader().getResourceAsStream("config.properties")) {
+                    //try (FileInputStream input = new FileInputStream(configFilePath)) {
+                        properties.load(input);
+        
+                        // Obtenir les credencials com a part del fitxer de propietats
+                        String dbUrl = properties.getProperty("db.url");
+                        String dbUser = properties.getProperty("db.username");
+                        String dbPassword = properties.getProperty("db.password");
+        
+                        // Conectar amb MariaDB
+                        try (Connection connection = DriverManager.getConnection(dbUrl, dbUser, dbPassword)) {
+                            System.out.println("Conexió exitosa");
+        
+                            String File_create_script = "db_scripts/DB_Schema_HR.sql" ;
+        
+                            InputStream input_sch = GestioDBHR.class.getClassLoader().getResourceAsStream(File_create_script);
+        
+                            CRUDHR crudbhr = new CRUDHR();
+                            //Aquí farem la creació de la database i de les taules, a més d'inserir dades
+                            crudbhr.CreateDatabase(connection,input_sch);
+                            while (sortirapp == false) {
+                                MenuOptions(br1,crudbhr,connection);
+                            }
 
-        try (BufferedReader br1 = new BufferedReader(new InputStreamReader(System.in))) {
-
-            try {
-                // Carregar propietats des de l'arxiu
-                Properties properties = new Properties();
-                try (InputStream input = GestioDBHR.class.getClassLoader().getResourceAsStream("config.properties")) {
-                //try (FileInputStream input = new FileInputStream(configFilePath)) {
-                    properties.load(input);
-    
-                    // Obtenir les credencials com a part del fitxer de propietats
-                    String dbUrl = properties.getProperty("db.url");
-                    String dbUser = properties.getProperty("db.username");
-                    String dbPassword = properties.getProperty("db.password");
-    
-                    // Conectar amb MariaDB
-                    try (Connection connection = DriverManager.getConnection(dbUrl, dbUser, dbPassword)) {
-                        System.out.println("Conexió exitosa");
-    
-                        String File_create_script = "db_scripts/DB_Schema_HR.sql" ;
-    
-                        InputStream input_sch = GestioDBHR.class.getClassLoader().getResourceAsStream(File_create_script);
-    
-                        CRUDHR crudbhr = new CRUDHR();
-                        //Aquí farem la creació de la database i de les taules, a més d'inserir dades
-                        crudbhr.CreateDatabase(connection,input_sch);
-
-                        MenuOptions(br1,crudbhr,connection);
-    
                     } catch (Exception e) {
                         System.err.println("Error al conectar: " + e.getMessage());
                     }
@@ -54,14 +63,43 @@ public class GestioDBHR {
     }
 
     public static void MenuOptions(BufferedReader br, CRUDHR crudbhr, Connection connection) 
-    throws NumberFormatException, IOException, SQLException {
+    throws NumberFormatException, IOException, SQLException, InterruptedException {
 
-        System.out.println("CONSULTA BD HR");
-        System.out.println("OPCIONS");
-        System.out.println("1. CARREGAR TAULA");
-        System.out.println("2. CONSULTAR DADES");
+        Terminal terminal = TerminalBuilder.builder().system(true).build();
 
-        System.out.print("Introdueix l'opció tot seguit >>");
+        String message = "";
+        message = "==================";
+        printScreen(terminal, message);
+
+        message = "CONSULTA BD HR";
+        printScreen(terminal, message);
+
+        message = "==================";
+        printScreen(terminal, message);
+
+
+        message = "OPCIONS";
+        printScreen(terminal, message);
+
+        message = "1. CARREGAR TAULA";
+        printScreen(terminal, message);
+
+        message = "2. CONSULTAR TOTES LES DADES";
+        printScreen(terminal, message);
+
+        message = "3. ALTRES CONSULTES";
+        printScreen(terminal, message);
+
+        message = "9. SORTIR";
+        printScreen(terminal, message);
+
+
+        message = "Introdueix l'opcio tot seguit >> ";
+        for (char c : message.toCharArray()) {
+            terminal.writer().print(c);
+            terminal.flush();
+            Thread.sleep(10);
+        }
 
         int opcio = Integer.parseInt(br.readLine());
 
@@ -71,7 +109,11 @@ public class GestioDBHR {
     
                 InputStream input_data = GestioDBHR.class.getClassLoader().getResourceAsStream(File_data_script);
 
-                crudbhr.CreateDatabase(connection,input_data);
+                if (crudbhr.CreateDatabase(connection,input_data) == true) {
+                    System.out.println("Registres duplicats");
+                } else {
+                    System.out.println("Registres inserits amb éxit");
+                }
 
                 break;
             case 2:
@@ -79,6 +121,15 @@ public class GestioDBHR {
                 MenuSelect(br,crudbhr,connection);
                 break;
 
+            case 3:
+                MenuSelectAltres(br,crudbhr,connection);
+                break;
+
+            case 9:
+                //sortim
+                System.out.println("Adéu!!");
+                sortirapp = true;
+                break;
             default:
                 System.out.print("Opcio no vàlida");
                 MenuOptions(br,crudbhr,connection);
@@ -86,62 +137,98 @@ public class GestioDBHR {
     
     }
 
+    private static void printScreen(Terminal terminal, String message) throws InterruptedException {
+        for (char c : message.toCharArray()) {
+            terminal.writer().print(c);
+            terminal.flush();
+            Thread.sleep(10);
+        }
+        System.out.println();
+    }
+
     public static void MenuSelect(BufferedReader br, CRUDHR crudbhr,Connection connection) 
     throws SQLException, NumberFormatException, IOException {
 
         int opcio = 0;
 
-        System.out.println("De quina taula vols mostrar els seus registres?");
-        System.out.println("1. Departaments");
-        System.out.println("2. Tasques");
-        System.out.println("3. Històric de tasques");
-        System.out.println("4. Empleats");
-        System.out.println("5. Sortir");
+        while (DispOptions) {
 
-        System.out.print("Introdueix l'opció tot seguit >>");
+            System.out.println("De quina taula vols mostrar els seus registres?");
+            System.out.println("1. Departaments");
+            System.out.println("2. Tasques");
+            System.out.println("3. Històric de tasques");
+            System.out.println("4. Empleats");
+            System.out.println("5. Sortir");
 
-        opcio = Integer.parseInt(br.readLine());
+            System.out.print("Introdueix l'opció tot seguit >> ");
 
-        boolean sortir = true;
+            opcio = Integer.parseInt(br.readLine());
 
-        while (sortir != false) {
-            System.out.println("sortir: " + sortir);
             switch(opcio) {
                 case 1:
-                    crudbhr.ReadDatabase(connection, "DEPARTMENTS");
+                    crudbhr.ReadAllDatabase(connection, "DEPARTMENTS");
                     break;
                 case 2:
-                    crudbhr.ReadDatabase(connection, "JOBS");
+                    crudbhr.ReadAllDatabase(connection, "JOBS");
                     break;
                 case 3:
-                    crudbhr.ReadDatabase(connection, "JOB_HISTORY");
+                    crudbhr.ReadAllDatabase(connection, "JOB_HISTORY");
                     break;
                 case 4:
-                    crudbhr.ReadDatabase(connection, "EMPLOYEES");
+                    crudbhr.ReadAllDatabase(connection, "EMPLOYEES");
                     break;
                 case 5:
-                    sortir = false;
+
+                    DispOptions = false;
                     break;
                 default:
                     System.out.print("Opcio no vàlida");
-                    MenuSelect(br,crudbhr, connection);
             }
-
-            System.out.println("Vols fer altra consulta? (S o N): ");
-            String opcioB = br.readLine();
-            if (opcioB.equals("N")){
-                System.out.print("NO NO NO");
-                opcio = 5;
-                sortir = false;
-                break;
-            } else {
-                System.out.print("aqui");
-                MenuSelect(br,crudbhr, connection);
+                
+            if (DispOptions) {
+                System.out.println("Vols fer altra consulta? (S o N): ");
+                String opcioB = br.readLine();
+        
+                if (opcioB.equalsIgnoreCase("n")){
+                    System.out.println("No, no marxis si us plau!");
+                    DispOptions = false;
+                    break;
+                } 
             }
+        }
+    }
 
-            System.out.println("sortir - B: " + sortir);
+    public static void MenuSelectAltres(BufferedReader br, CRUDHR crudbhr,Connection connection) 
+    throws SQLException, NumberFormatException, IOException {
+
+        int opcio = 0;
+
+        while (DispOptions) {
+
+            System.out.println("Quina consulta vols fer?");
+            System.out.println("1. Departament per id");
+            System.out.println("2. Rang de salaris d'empleats");
+
+            System.out.print("Introdueix l'opció tot seguit >> ");
+
+            opcio = Integer.parseInt(br.readLine());
+
+            switch(opcio) {
+                case 1:
+                    System.out.println("Introdueix la id del departament >> ");
+                    int idDept = Integer.parseInt(br.readLine());
+                    crudbhr.ReadDepartamentsId(connection, "DEPARTMENTS", idDept);
+                    break;
+                case 2:
+                    System.out.println("Introdueix el salari mínim dins el rang >> ");
+                    float salMin = Float.parseFloat(br.readLine());
+                    System.out.println("Introdueix el salari màxim dins el rang >> ");
+                    float salMax = Float.parseFloat(br.readLine());
+                    crudbhr.ReadSalaries(connection, "EMPLOYEES", salMin,salMax);
+            }
 
         }
 
     }
+
 }

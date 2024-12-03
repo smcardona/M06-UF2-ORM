@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.ConnectException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -13,8 +14,10 @@ import java.sql.Statement;
 
 public class CRUDHR {
     
-    public void CreateDatabase(Connection connection, InputStream input) 
+    public boolean CreateDatabase(Connection connection, InputStream input) 
     throws IOException, ConnectException, SQLException {
+
+        boolean dupRecord = false;
 
         try (BufferedReader br = new BufferedReader(new InputStreamReader(input))) {
             StringBuilder sqlStatement = new StringBuilder();
@@ -42,12 +45,21 @@ public class CRUDHR {
                         sqlStatement.setLength(0);
                     }
                 }
-            } 
+            } catch (SQLException sqle) {
+                if (!sqle.getMessage().contains("Duplicate entry")) {
+                    System.err.println(sqle.getMessage());
+                } else {
+                    dupRecord = true;
+                    br.readLine();
+                }
+            }
         }
+
+        return dupRecord;
     }
 
 //Read sense prepared statements, mostra tots els registres
-    public void ReadDatabase(Connection connection, String TableName) throws ConnectException, SQLException {
+    public void ReadAllDatabase(Connection connection, String TableName) throws ConnectException, SQLException {
         try (Statement statement = connection.createStatement()) {
             
             String query = "SELECT * FROM " + TableName + ";";
@@ -55,6 +67,50 @@ public class CRUDHR {
             ResultSet rset = statement.executeQuery(query);
             
             //obtenim numero de columnes i nom
+            int colNum = getColumnNames(rset);
+
+            //Si el nombre de columnes és >0 procedim a llegir i mostrar els registres
+            if (colNum > 0) {
+
+                recorrerRegistres(rset,colNum);
+
+            }
+        }
+    }
+
+    public void ReadDepartamentsId(Connection connection, String TableName, int id) 
+    throws ConnectException, SQLException {
+
+        String query = "SELECT * FROM " + TableName + " WHERE department_id = ?";
+
+        try (PreparedStatement prepstat = connection.prepareStatement(query)) {
+
+            prepstat.setInt(1, id);
+            ResultSet rset = prepstat.executeQuery();
+
+            int colNum = getColumnNames(rset);
+
+            //Si el nombre de columnes és >0 procedim a llegir i mostrar els registres
+            if (colNum > 0) {
+
+                recorrerRegistres(rset,colNum);
+
+            }
+        }
+    }
+
+    public void ReadSalaries(Connection connection, String TableName, float salMin, float salMax) 
+    throws ConnectException, SQLException {
+
+        String query = "SELECT EMPLOYEE_ID, FIRST_NAME, LAST_NAME, SALARY FROM " 
+                     + TableName + " WHERE salary BETWEEN ? AND ?";
+
+        try (PreparedStatement prepstat = connection.prepareStatement(query)) {
+
+            prepstat.setFloat(1, salMin);
+            prepstat.setFloat(2, salMax);
+            ResultSet rset = prepstat.executeQuery();
+
             int colNum = getColumnNames(rset);
 
             //Si el nombre de columnes és >0 procedim a llegir i mostrar els registres
