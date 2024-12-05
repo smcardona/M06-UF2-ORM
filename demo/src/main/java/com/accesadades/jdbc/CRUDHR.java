@@ -58,6 +58,20 @@ public class CRUDHR {
         return dupRecord;
     }
 
+    public void InsertEmployee(Connection connection, String TableName) throws ConnectException, SQLException {
+
+        String query = "INSERT INTO " + TableName 
+                    + " (EMPLOYEE_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE_INT, HIRE_DATE,"
+                    + "JOB_ID, SALARY, COMMISSION_PCT, MANAGER_ID, DEPARTMENT_ID, BONUS)"
+                    + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+
+        try (PreparedStatement prepstat = connection.prepareStatement(query)) {
+            
+        }
+
+
+    }
+
 //Read sense prepared statements, mostra tots els registres
     public void ReadAllDatabase(Connection connection, String TableName) throws ConnectException, SQLException {
         try (Statement statement = connection.createStatement()) {
