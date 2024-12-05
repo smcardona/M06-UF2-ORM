@@ -1,7 +1,5 @@
 package com.accesadades.jdbc;
 
-import java.time.LocalDate;
-
 public class Employees {
 
     private int employeeId; // EMPLOYEE_ID
@@ -9,7 +7,7 @@ public class Employees {
     private String lastName; // LAST_NAME
     private String email; // EMAIL
     private String phoneInt; // PHONE_INT
-    private LocalDate hireDate; // HIRE_DATE
+    private String hireDate; // HIRE_DATE
     private String jobId; // JOB_ID
     private Float salary; // SALARY
     private Float commissionPct; // COMMISSION_PCT
@@ -19,7 +17,7 @@ public class Employees {
 
     // Constructor completo
     public Employees(int employeeId, String firstName, String lastName, String email, String phoneInt,
-                  LocalDate hireDate, String jobId, Float salary, Float commissionPct,
+                  String hireDate, String jobId, Float salary, Float commissionPct,
                   Integer managerId, Integer departmentId, String bonus) {
         this.employeeId = employeeId;
         this.firstName = firstName;
@@ -76,11 +74,11 @@ public class Employees {
         this.phoneInt = phoneInt;
     }
 
-    public LocalDate getHireDate() {
+    public String getHireDate() {
         return hireDate;
     }
 
-    public void setHireDate(LocalDate hireDate) {
+    public void setHireDate(String hireDate) {
         this.hireDate = hireDate;
     }
 

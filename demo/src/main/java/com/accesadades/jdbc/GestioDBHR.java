@@ -90,6 +90,9 @@ public class GestioDBHR {
         message = "3. ALTRES CONSULTES";
         printScreen(terminal, message);
 
+        message = "4. INSERIR NOU REGISTRE";
+        printScreen(terminal, message);
+
         message = "9. SORTIR";
         printScreen(terminal, message);
 
@@ -123,6 +126,10 @@ public class GestioDBHR {
 
             case 3:
                 MenuSelectAltres(br,crudbhr,connection);
+                break;
+
+            case 4:
+                MenuInsert(br,crudbhr,connection);
                 break;
 
             case 9:
@@ -230,5 +237,199 @@ public class GestioDBHR {
         }
 
     }
+
+    public static void MenuInsert(BufferedReader br, CRUDHR crudbhr,Connection connection) 
+    throws SQLException, NumberFormatException, IOException {
+
+        boolean insertMore = true;
+
+        while (insertMore) {
+
+            boolean dadaValida = true;
+
+            System.out.println("Introdueix els detalls del nou empleat");
+
+            int idEmpl = 0;
+
+            while (dadaValida) {
+                System.out.print("Quina és la id (PK) de l'empleat? >> ");
+
+                try {
+
+                    idEmpl = Integer.parseInt(br.readLine());
+
+                    if (idEmpl <= 0) {
+                        System.out.println("Format numèric no vàlid");
+
+                    } else {
+                        dadaValida = false;
+                    }
+                    
+                } catch (Exception e) {
+                    System.out.println("Format numèric no vàlid");
+                }
+
+            }
+
+            System.out.print("Introdueix el nom de l'empleat >> ");
+            String nomEmp = br.readLine();
+
+            System.out.print("Introdueix el cognom de l'empleat >> ");
+            String cognomEmp = br.readLine();
+
+            System.out.print("Introdueix l'email de l'empleat >> ");
+            String emailEmp = br.readLine();
+
+            System.out.print("Introdueix el telèfon de l'empleat >> ");
+            String telEmp = br.readLine();
+
+            dadaValida = true;
+
+            String hireDateEmp = "";
+
+            while (dadaValida) {
+                System.out.print("Introdueix la data d'incorporació de l'empleat (AAAA-MM-DD) >> ");
+
+                try {
+
+                    hireDateEmp = br.readLine();
+
+                    if (!hireDateEmp.matches("^(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$")) {
+                        System.out.println("Format de data no vàlid");
+
+                    } else {
+                        dadaValida = false;
+                    }
+                    
+                } catch (Exception e) {
+                    System.out.println("Format de data no vàlid");
+                }
+            }
+
+            System.out.print("Introdueix la id de tasca l'empleat >> ");
+            String jobIdEmp = br.readLine();
+            
+            float salariEmpl = 0;
+            dadaValida = true;
+
+            while (dadaValida) {
+                System.out.print("Introdueix el salari anual de l'empleat >> ");
+
+                try {
+
+                    salariEmpl = Float.parseFloat(br.readLine());
+
+                    if ( salariEmpl <= 0)   {
+                        System.out.println("Salari no pot ser 0 o negatiu");
+
+                    } else {
+                        dadaValida = false;
+                    }
+                    
+                } catch (Exception e) {
+                    System.out.println("Format de salari no vàlid");
+                }
+
+            }
+            
+            float comPCTEmpl = 0;
+            dadaValida = true;
+
+            while (dadaValida) {
+                System.out.print("Introdueix les comissions a percebre de l'empleat >> ");
+
+                try {
+
+                    comPCTEmpl = Float.parseFloat(br.readLine());
+
+                    if ( comPCTEmpl <= 0)   {
+                        System.out.println("Comissió no pot ser 0 o negativa");
+
+                    } else {
+                        dadaValida = false;
+                    }
+                    
+                } catch (Exception e) {
+                    System.out.println("Format de comissió no vàlida");
+                }
+            }
+
+            dadaValida = true;
+
+            int idManagerEmpl = 0;
+
+            while (dadaValida) {
+                System.out.print("Quina és la id del manager de l'empleat? >> ");
+
+                try {
+
+                    idManagerEmpl = Integer.parseInt(br.readLine());
+
+                    if ( idManagerEmpl <= 0)   {
+                        System.out.println("id Manager no pot ser 0");
+
+                    } else {
+                        dadaValida = false;
+                    }
+                    
+                } catch (Exception e) {
+                    System.out.println("Format de Id de Manager no vàlid");
+                }
+
+            }
+
+            int idDeptEmpl = 0;
+            dadaValida = true;
+
+            while (dadaValida) {
+                System.out.print("Quina és la id del departament de l'empleat? >> ");
+
+                try {
+
+                    idDeptEmpl = Integer.parseInt(br.readLine());
+
+                    if ( idDeptEmpl <= 0)   {
+                        System.out.println("id departament no pot ser 0");
+
+                    } else {
+                        dadaValida = false;
+                    }
+                    
+                } catch (Exception e) {
+                    System.out.println("Format de Id de Departament no vàlid");
+                }
+            }
+
+            String bonusEmp = "";
+            dadaValida = true;
+
+            while (dadaValida) {
+                System.out.print("Quina és el bonus de l'empleat? >> ");
+
+                bonusEmp = br.readLine();
+
+                if ( !bonusEmp.matches("^[1-9][0-9]*$"))   {
+                    System.out.println("bonus ha de ser numèric i positiu");
+
+                } else {
+                    dadaValida = false;
+                }
+
+            }
+
+            Employees emp = new Employees(idEmpl, nomEmp, cognomEmp, emailEmp, telEmp, hireDateEmp, jobIdEmp, 
+            salariEmpl, comPCTEmpl, idManagerEmpl, idDeptEmpl, bonusEmp);
+
+            crudbhr.InsertEmployee(connection, "Employees", emp);
+
+            System.out.println("Vols afegir un altre empleat?");
+
+            if (!br.readLine().matches("[sS]")) {
+                insertMore = false;
+            }
+
+        }
+                            
+        }
 
 }

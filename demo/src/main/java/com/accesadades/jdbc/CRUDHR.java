@@ -58,7 +58,8 @@ public class CRUDHR {
         return dupRecord;
     }
 
-    public void InsertEmployee(Connection connection, String TableName) throws ConnectException, SQLException {
+    public void InsertEmployee(Connection connection, String TableName, Employees employee) 
+    throws ConnectException, SQLException {
 
         String query = "INSERT INTO " + TableName 
                     + " (EMPLOYEE_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE_INT, HIRE_DATE,"
@@ -66,9 +67,31 @@ public class CRUDHR {
                     + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
 
         try (PreparedStatement prepstat = connection.prepareStatement(query)) {
-            
-        }
 
+            prepstat.setInt(1, employee.getEmployeeId());
+            prepstat.setString(2, employee.getFirstName());
+            prepstat.setString(3, employee.getLastName());
+            prepstat.setString(4, employee.getEmail());
+            prepstat.setString(5, employee.getPhoneInt());
+            prepstat.setString(6, employee.getHireDate());
+            prepstat.setString(7, employee.getJobId());
+            prepstat.setFloat(8, employee.getSalary());
+            prepstat.setFloat(9, employee.getCommissionPct());
+            prepstat.setInt(10, employee.getManagerId());
+            prepstat.setInt(11, employee.getDepartmentId());
+            prepstat.setString(12, employee.getBonus());
+
+            prepstat.executeUpdate();
+
+            System.out.println("Empleat afegit amb èxit");
+        
+        } catch (SQLException sqle) {
+            if (!sqle.getMessage().contains("Duplicate entry")) {
+                System.err.println(sqle.getMessage());
+            } else {
+                System.out.println("Registre duplicat");
+            }
+        }
 
     }
 
@@ -89,6 +112,8 @@ public class CRUDHR {
                 recorrerRegistres(rset,colNum);
 
             }
+        } catch (SQLException sqle) {
+            System.err.println(sqle.getMessage());
         }
     }
 
@@ -110,6 +135,8 @@ public class CRUDHR {
                 recorrerRegistres(rset,colNum);
 
             }
+        } catch (SQLException sqle) {
+            System.err.println(sqle.getMessage());
         }
     }
 
@@ -133,6 +160,8 @@ public class CRUDHR {
                 recorrerRegistres(rset,colNum);
 
             }
+        } catch (SQLException sqle) {
+            System.err.println(sqle.getMessage());
         }
     }
 
