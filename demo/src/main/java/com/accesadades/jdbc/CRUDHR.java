@@ -66,6 +66,12 @@ public class CRUDHR {
                     + "JOB_ID, SALARY, COMMISSION_PCT, MANAGER_ID, DEPARTMENT_ID, BONUS)"
                     + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
 
+//recuperem valor inicial de l'autocommit
+        boolean autocommitvalue = connection.getAutoCommit();
+
+//el modifiquem a false
+        connection.setAutoCommit(false);
+
         try (PreparedStatement prepstat = connection.prepareStatement(query)) {
 
             prepstat.setInt(1, employee.getEmployeeId());
@@ -83,7 +89,13 @@ public class CRUDHR {
 
             prepstat.executeUpdate();
 
+//Fem el commit
+            connection.commit();
+
             System.out.println("Empleat afegit amb èxit");
+
+//deixem l'autocommit com estava
+            connection.setAutoCommit(autocommitvalue);
         
         } catch (SQLException sqle) {
             if (!sqle.getMessage().contains("Duplicate entry")) {
@@ -91,6 +103,8 @@ public class CRUDHR {
             } else {
                 System.out.println("Registre duplicat");
             }
+
+            connection.rollback();
         }
 
     }
