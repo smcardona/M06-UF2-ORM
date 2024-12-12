@@ -12,9 +12,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class CRUDHR {
+public class CRUD_AER {
     
-    public boolean CreateDatabase(Connection connection, InputStream input) 
+    public boolean createDatabase(Connection connection, InputStream input) 
     throws IOException, ConnectException, SQLException {
 
         boolean dupRecord = false;
@@ -58,44 +58,42 @@ public class CRUDHR {
         return dupRecord;
     }
 
-    public void InsertEmployee(Connection connection, String TableName, Employees employee) 
+    public int insertPersona(Connection connection, String TableName, Pasajero pasajero) 
     throws ConnectException, SQLException {
 
-        String query = "INSERT INTO " + TableName 
-                    + " (EMPLOYEE_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE_INT, HIRE_DATE,"
-                    + "JOB_ID, SALARY, COMMISSION_PCT, MANAGER_ID, DEPARTMENT_ID, BONUS)"
-                    + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+        String query = "INSERT INTO PERSONA"  
+                    + " (nombre, pasaporte, telefono)"
+                    + " VALUES (?,?, ?)";
 
-//recuperem valor inicial de l'autocommit
+        //recuperem valor inicial de l'autocommit
         boolean autocommitvalue = connection.getAutoCommit();
 
-//el modifiquem a false
+        //el modifiquem a false
         connection.setAutoCommit(false);
 
         try (PreparedStatement prepstat = connection.prepareStatement(query)) {
 
-            prepstat.setInt(1, employee.getEmployeeId());
-            prepstat.setString(2, employee.getFirstName());
-            prepstat.setString(3, employee.getLastName());
-            prepstat.setString(4, employee.getEmail());
-            prepstat.setString(5, employee.getPhoneInt());
-            prepstat.setString(6, employee.getHireDate());
-            prepstat.setString(7, employee.getJobId());
-            prepstat.setFloat(8, employee.getSalary());
-            prepstat.setFloat(9, employee.getCommissionPct());
-            prepstat.setInt(10, employee.getManagerId());
-            prepstat.setInt(11, employee.getDepartmentId());
-            prepstat.setString(12, employee.getBonus());
-
+            prepstat.setString(1, pasajero.getName());
+            prepstat.setString(2, pasajero.getPassaport());
+            prepstat.setString(3, pasajero.getTelefono());
             prepstat.executeUpdate();
 
-//Fem el commit
+            // Obtener el ID generado
+            int id = -1;
+            ResultSet generatedKeys = prepstat.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                id = generatedKeys.getInt(1);
+                System.out.println("ID asignado: " + id);
+            }
+
+            // Fem el commit
             connection.commit();
 
-            System.out.println("Empleat afegit amb èxit");
+            System.out.println("Persona agregada exitosa mente");
 
-//deixem l'autocommit com estava
+            //deixem l'autocommit com estava
             connection.setAutoCommit(autocommitvalue);
+            return id;
         
         } catch (SQLException sqle) {
             if (!sqle.getMessage().contains("Duplicate entry")) {
@@ -105,11 +103,61 @@ public class CRUDHR {
             }
 
             connection.rollback();
+            return -1;
         }
 
     }
 
-//Read sense prepared statements, mostra tots els registres
+    public int insertPasajero(Connection connection, String TableName, Pasajero pasajero) 
+    throws ConnectException, SQLException {
+
+        String query = "INSERT INTO PASAJERO"  
+                    + " (persona_id)"
+                    + " VALUES (?)";
+
+        //recuperem valor inicial de l'autocommit
+        boolean autocommitvalue = connection.getAutoCommit();
+
+        //el modifiquem a false
+        connection.setAutoCommit(false);
+
+        try (PreparedStatement prepstat = connection.prepareStatement(query)) {
+
+            int id = insertPersona(connection, TableName, pasajero);
+
+            prepstat.setInt(1, id);
+            prepstat.executeUpdate();
+
+            // Obtener el ID generado
+            ResultSet generatedKeys = prepstat.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                id = generatedKeys.getInt(1);
+                System.out.println("ID asignado: " + id);
+            }
+
+            // Fem el commit
+            connection.commit();
+
+            System.out.println("Persona agregada exitosa mente");
+
+            //deixem l'autocommit com estava
+            connection.setAutoCommit(autocommitvalue);
+            return id;
+        
+        } catch (SQLException sqle) {
+            if (!sqle.getMessage().contains("Duplicate entry")) {
+                System.err.println(sqle.getMessage());
+            } else {
+                System.out.println("Registre duplicat");
+            }
+
+            connection.rollback();
+            return -1;
+        }
+
+    }
+
+    //Read sense prepared statements, mostra tots els registres
     public void ReadAllDatabase(Connection connection, String TableName) throws ConnectException, SQLException {
         try (Statement statement = connection.createStatement()) {
             
@@ -180,7 +228,7 @@ public class CRUDHR {
     }
 
 
-//Aquest mètode auxiliar podria ser utileria del READ, mostra el nom de les columnes i quantes n'hi ha
+    //Aquest mètode auxiliar podria ser utileria del READ, mostra el nom de les columnes i quantes n'hi ha
     public static int getColumnNames(ResultSet rs) throws SQLException {
         
         int numberOfColumns = 0;

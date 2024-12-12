@@ -42,9 +42,9 @@ public class GestioDBHR {
         
                             InputStream input_sch = GestioDBHR.class.getClassLoader().getResourceAsStream(File_create_script);
         
-                            CRUDHR crudbhr = new CRUDHR();
+                            CRUD_AER crudbhr = new CRUD_AER();
                             //Aquí farem la creació de la database i de les taules, a més d'inserir dades
-                            crudbhr.CreateDatabase(connection,input_sch);
+                            crudbhr.createDatabase(connection,input_sch);
                             while (sortirapp == false) {
                                 MenuOptions(br1,crudbhr,connection);
                             }
@@ -62,7 +62,7 @@ public class GestioDBHR {
         }
     }
 
-    public static void MenuOptions(BufferedReader br, CRUDHR crudbhr, Connection connection) 
+    public static void MenuOptions(BufferedReader br, CRUD_AER crudbhr, Connection connection) 
     throws NumberFormatException, IOException, SQLException, InterruptedException {
 
         Terminal terminal = TerminalBuilder.builder().system(true).build();
@@ -112,7 +112,7 @@ public class GestioDBHR {
     
                 InputStream input_data = GestioDBHR.class.getClassLoader().getResourceAsStream(File_data_script);
 
-                if (crudbhr.CreateDatabase(connection,input_data) == true) {
+                if (crudbhr.createDatabase(connection,input_data) == true) {
                     System.out.println("Registres duplicats");
                 } else {
                     System.out.println("Registres inserits amb éxit");
@@ -153,7 +153,7 @@ public class GestioDBHR {
         System.out.println();
     }
 
-    public static void MenuSelect(BufferedReader br, CRUDHR crudbhr,Connection connection) 
+    public static void MenuSelect(BufferedReader br, CRUD_AER crudbhr,Connection connection) 
     throws SQLException, NumberFormatException, IOException {
 
         int opcio = 0;
@@ -205,7 +205,7 @@ public class GestioDBHR {
         }
     }
 
-    public static void MenuSelectAltres(BufferedReader br, CRUDHR crudbhr,Connection connection) 
+    public static void MenuSelectAltres(BufferedReader br, CRUD_AER crudbhr,Connection connection) 
     throws SQLException, NumberFormatException, IOException {
 
         int opcio = 0;
@@ -238,7 +238,7 @@ public class GestioDBHR {
 
     }
 
-    public static void MenuInsert(BufferedReader br, CRUDHR crudbhr,Connection connection) 
+    public static void MenuInsert(BufferedReader br, CRUD_AER crudbhr,Connection connection) 
     throws SQLException, NumberFormatException, IOException {
 
         boolean insertMore = true;
@@ -417,10 +417,10 @@ public class GestioDBHR {
 
             }
 
-            Employees emp = new Employees(idEmpl, nomEmp, cognomEmp, emailEmp, telEmp, hireDateEmp, jobIdEmp, 
+            Pasajero emp = new Pasajero(idEmpl, nomEmp, cognomEmp, emailEmp, telEmp, hireDateEmp, jobIdEmp, 
             salariEmpl, comPCTEmpl, idManagerEmpl, idDeptEmpl, bonusEmp);
 
-            crudbhr.InsertEmployee(connection, "Employees", emp);
+            crudbhr.insertPasajero(connection, "Employees", emp);
 
             System.out.println("Vols afegir un altre empleat?");
 
