@@ -34,4 +34,17 @@
         </dependency>
 
     </dependencies>
+    <build>
+        <plugins>
+            <!-- Plugin para ejecutar la aplicación directamente con Maven -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <mainClass>com.accesadades.jdbc.GestioDBAER</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

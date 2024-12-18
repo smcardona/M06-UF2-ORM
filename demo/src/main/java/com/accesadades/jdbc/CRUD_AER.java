@@ -12,13 +12,24 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import com.accesadades.jdbc.util.Color;
+
 public class CRUD_AER {
+
+    private Connection connection;
+
+    public CRUD_AER(Connection con) {
+        connection = con;
+    }
+
     
-    public boolean createDatabase(Connection connection, InputStream input) 
+    public boolean createDatabase(InputStream input) 
     throws IOException, ConnectException, SQLException {
 
         boolean dupRecord = false;
 
+
+        // EJECUTA STATEMENTS DE UN ARCHIVO.sql
         try (BufferedReader br = new BufferedReader(new InputStreamReader(input))) {
             StringBuilder sqlStatement = new StringBuilder();
             String line;
@@ -37,7 +48,7 @@ public class CRUD_AER {
 
                     // el caràcter ";" es considera terminació de sentència SQL
                     if (line.endsWith(";")) {
-                    // Eliminar el ";" i executar la instrucción
+                        // Eliminar el ";" i executar la instrucción
                         String sql = sqlStatement.toString().replace(";", "").trim();
                         statement.execute(sql);
 
@@ -47,7 +58,8 @@ public class CRUD_AER {
                 }
             } catch (SQLException sqle) {
                 if (!sqle.getMessage().contains("Duplicate entry")) {
-                    System.err.println(sqle.getMessage());
+                    System.err.println("SQL_ERROR: "+sqle.getMessage());
+                    sqle.printStackTrace();
                 } else {
                     dupRecord = true;
                     br.readLine();
@@ -58,12 +70,11 @@ public class CRUD_AER {
         return dupRecord;
     }
 
-    public int insertPersona(Connection connection, String TableName, Pasajero pasajero) 
-    throws ConnectException, SQLException {
+    public int insertPersona(Azafata persona) throws ConnectException, SQLException {
 
-        String query = "INSERT INTO PERSONA"  
+        String query = "INSERT INTO persona"  
                     + " (nombre, pasaporte, telefono)"
-                    + " VALUES (?,?, ?)";
+                    + " VALUES (?, ?, ?)";
 
         //recuperem valor inicial de l'autocommit
         boolean autocommitvalue = connection.getAutoCommit();
@@ -73,9 +84,9 @@ public class CRUD_AER {
 
         try (PreparedStatement prepstat = connection.prepareStatement(query)) {
 
-            prepstat.setString(1, pasajero.getName());
-            prepstat.setString(2, pasajero.getPassaport());
-            prepstat.setString(3, pasajero.getTelefono());
+            prepstat.setString(1, persona.getName());
+            prepstat.setString(2, persona.getPassport());
+            prepstat.setString(3, persona.getPhone());
             prepstat.executeUpdate();
 
             // Obtener el ID generado
@@ -83,13 +94,13 @@ public class CRUD_AER {
             ResultSet generatedKeys = prepstat.getGeneratedKeys();
             if (generatedKeys.next()) {
                 id = generatedKeys.getInt(1);
-                System.out.println("ID asignado: " + id);
+                System.out.println("ID assignat: " + id);
             }
 
             // Fem el commit
             connection.commit();
 
-            System.out.println("Persona agregada exitosa mente");
+            System.out.println("Persona afegida correctament");
 
             //deixem l'autocommit com estava
             connection.setAutoCommit(autocommitvalue);
@@ -108,12 +119,9 @@ public class CRUD_AER {
 
     }
 
-    public int insertPasajero(Connection connection, String TableName, Pasajero pasajero) 
-    throws ConnectException, SQLException {
+    public int insertAzafata(Azafata azafata) throws ConnectException, SQLException {
 
-        String query = "INSERT INTO PASAJERO"  
-                    + " (persona_id)"
-                    + " VALUES (?)";
+        String query = "INSERT INTO azafata (persona_id, ig) VALUES (?, ?)";
 
         //recuperem valor inicial de l'autocommit
         boolean autocommitvalue = connection.getAutoCommit();
@@ -123,22 +131,24 @@ public class CRUD_AER {
 
         try (PreparedStatement prepstat = connection.prepareStatement(query)) {
 
-            int id = insertPersona(connection, TableName, pasajero);
+            // Primero inserta la azafata como persona y obtiene la id
+            int id = insertPersona(azafata);
 
             prepstat.setInt(1, id);
+            prepstat.setString(2, azafata.getIg());
             prepstat.executeUpdate();
 
             // Obtener el ID generado
             ResultSet generatedKeys = prepstat.getGeneratedKeys();
             if (generatedKeys.next()) {
                 id = generatedKeys.getInt(1);
-                System.out.println("ID asignado: " + id);
+                System.out.println("ID assignat: " + id);
             }
 
             // Fem el commit
             connection.commit();
 
-            System.out.println("Persona agregada exitosa mente");
+            System.out.println("Hostessa afegida correctament");
 
             //deixem l'autocommit com estava
             connection.setAutoCommit(autocommitvalue);
@@ -158,15 +168,28 @@ public class CRUD_AER {
     }
 
     //Read sense prepared statements, mostra tots els registres
-    public void ReadAllDatabase(Connection connection, String TableName) throws ConnectException, SQLException {
-        try (Statement statement = connection.createStatement()) {
-            
-            String query = "SELECT * FROM " + TableName + ";";
+    public void readAzafatas(String filter, Azafata.Filter fType) throws ConnectException, SQLException {
+        String query = """
+                SELECT
+                    p.ID as ID,
+                    p.nombre as NOM,
+                    p.pasaporte as PASSAPORT,
+                    p.telefono as TELEFON,
+                    a.ig as IG
+                """ +
+                "FROM azafata a join persona p on (a.persona_id = p.id) " +  
+                (filter == null || fType == null ? "" : String.format("WHERE %s like ?", fType.name().toLowerCase()));
 
-            ResultSet rset = statement.executeQuery(query);
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            
+            if (filter != null) {
+                statement.setString(1, filter);
+            }
+
+            ResultSet rset = statement.executeQuery();
             
             //obtenim numero de columnes i nom
-            int colNum = getColumnNames(rset);
+            int colNum = getColumnQuantity(rset);
 
             //Si el nombre de columnes és >0 procedim a llegir i mostrar els registres
             if (colNum > 0) {
@@ -175,61 +198,112 @@ public class CRUD_AER {
 
             }
         } catch (SQLException sqle) {
-            System.err.println(sqle.getMessage());
+            Color.RED.println(sqle.getMessage());
         }
     }
 
-    public void ReadDepartamentsId(Connection connection, String TableName, int id) 
-    throws ConnectException, SQLException {
+    public void readAzafatas()  throws ConnectException, SQLException {
+        readAzafatas(null, null);
+    }
 
-        String query = "SELECT * FROM " + TableName + " WHERE department_id = ?";
+    public Azafata readAzafata(int id) {
+        String query = "SELECT p.id as id, p.nombre as nombre, p.pasaporte as pasaporte, p.telefono as telefono, a.ig as ig "
+            + "FROM azafata a join persona p on (a.persona_id = p.id) "
+            + "WHERE a.persona_id = ? ;";
 
-        try (PreparedStatement prepstat = connection.prepareStatement(query)) {
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            
+            statement.setInt(1, id);
 
+            ResultSet rset = statement.executeQuery();
+            
+            //Si tiene resultado: 
+            if (rset.next()) {
+
+                return new Azafata(
+                    rset.getInt("id"), 
+                    rset.getString("nombre"), 
+                    rset.getString("pasaporte"), 
+                    rset.getString("telefono"),
+                    rset.getString("ig"));
+
+            }
+
+            else return null;
+        } catch (SQLException sqle) {
+            Color.RED.println(sqle.getMessage());
+            return null;
+        }
+    }
+
+    public void updateAzafata(Azafata toUpdate) throws Exception {
+        String queryPersona = "UPDATE persona SET nombre = ?, pasaporte = ?, telefono = ? WHERE id = ?";
+        String queryAzafata = "UPDATE azafata SET ig = ? WHERE persona_id = ?";
+
+
+        try (PreparedStatement prepstat = connection.prepareStatement(queryPersona)) {
+            prepstat.setString(1, toUpdate.getName());
+            prepstat.setString(2, toUpdate.getPassport());
+            prepstat.setString(3, toUpdate.getPhone());
+            prepstat.setInt(4, toUpdate.getId());
+
+            int rowsAffected = prepstat.executeUpdate();
+            
+            try (PreparedStatement prepstatAzafata = connection.prepareStatement(queryAzafata)) {
+                prepstatAzafata.setString(1, toUpdate.getIg());
+                prepstatAzafata.setInt(2, toUpdate.getId());
+
+                rowsAffected += prepstatAzafata.executeUpdate();
+                
+                connection.commit();
+            }
+
+            
+
+            if (rowsAffected > 0) {
+                System.out.println("Hostessa actualitzada exitosament");
+            } else {
+                System.out.println("No s'ha trobat l'hostessa amb l'ID proporcionat");
+            }
+        } catch (SQLException sqle) {
+            connection.rollback();
+            Color.RED.println(sqle.getMessage());
+        }
+    }
+
+    public void deleteAzafata(int id) throws Exception {
+
+        String queryAzafata = "DELETE FROM azafata WHERE persona_id = ?";
+        String queryPersona = "DELETE FROM persona WHERE id = ?";
+
+
+        try (PreparedStatement prepstat = connection.prepareStatement(queryAzafata)) {
             prepstat.setInt(1, id);
-            ResultSet rset = prepstat.executeQuery();
 
-            int colNum = getColumnNames(rset);
+            int rowsAffected = prepstat.executeUpdate();
 
-            //Si el nombre de columnes és >0 procedim a llegir i mostrar els registres
-            if (colNum > 0) {
+            try(PreparedStatement prepPersona = connection.prepareStatement(queryPersona)) {
+                prepPersona.setInt(1, id);
 
-                recorrerRegistres(rset,colNum);
+                rowsAffected += prepPersona.executeUpdate();
+                connection.commit();
+            }
 
+            if (rowsAffected > 0) {
+                System.out.println("Hostessa eliminada exitosament");
+            } else {
+                System.out.println("No s'ha trobat l'hostessa amb l'ID proporcionat");
             }
         } catch (SQLException sqle) {
-            System.err.println(sqle.getMessage());
+            connection.rollback();
+            Color.RED.println(sqle.getMessage());
         }
-    }
 
-    public void ReadSalaries(Connection connection, String TableName, float salMin, float salMax) 
-    throws ConnectException, SQLException {
-
-        String query = "SELECT EMPLOYEE_ID, FIRST_NAME, LAST_NAME, SALARY FROM " 
-                     + TableName + " WHERE salary BETWEEN ? AND ?";
-
-        try (PreparedStatement prepstat = connection.prepareStatement(query)) {
-
-            prepstat.setFloat(1, salMin);
-            prepstat.setFloat(2, salMax);
-            ResultSet rset = prepstat.executeQuery();
-
-            int colNum = getColumnNames(rset);
-
-            //Si el nombre de columnes és >0 procedim a llegir i mostrar els registres
-            if (colNum > 0) {
-
-                recorrerRegistres(rset,colNum);
-
-            }
-        } catch (SQLException sqle) {
-            System.err.println(sqle.getMessage());
-        }
     }
 
 
     //Aquest mètode auxiliar podria ser utileria del READ, mostra el nom de les columnes i quantes n'hi ha
-    public static int getColumnNames(ResultSet rs) throws SQLException {
+    public static int getColumnQuantity(ResultSet rs) throws SQLException {
         
         int numberOfColumns = 0;
         
@@ -251,17 +325,20 @@ public class CRUD_AER {
 
     public void recorrerRegistres(ResultSet rs, int ColNum) throws SQLException {
 
+        // Iterate through each row in the ResultSet
         while(rs.next()) {
+            // Iterate through each column in the current row
             for(int i =0; i<ColNum; i++) {
+                // If it's the last column, print the value followed by a newline
                 if(i+1 == ColNum) {
                     System.out.println(rs.getString(i+1));
                 } else {
-            
-                System.out.print(rs.getString(i+1)+ ", ");
+                    // Otherwise, print the value followed by a comma and space
+                    System.out.print(rs.getString(i+1)+ ", ");
                 }
             } 
         }
-            
-    }
         
+    }
+    
 }
