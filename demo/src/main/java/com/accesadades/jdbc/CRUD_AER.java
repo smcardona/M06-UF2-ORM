@@ -1,6 +1,7 @@
 package com.accesadades.jdbc;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -8,11 +9,14 @@ import java.net.ConnectException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 
 import com.accesadades.jdbc.util.Color;
+import com.accesadades.jdbc.util.Paginator;
+import com.accesadades.jdbc.util.QuickIO;
+import com.accesadades.jdbc.util.UtilString;
 
 public class CRUD_AER {
 
@@ -168,7 +172,7 @@ public class CRUD_AER {
     }
 
     //Read sense prepared statements, mostra tots els registres
-    public void readAzafatas(String filter, Azafata.Filter fType) throws ConnectException, SQLException {
+    public void readAzafatas(String filter, Azafata.Filter fType) throws Exception {
         String query = """
                 SELECT
                     p.ID as ID,
@@ -189,20 +193,19 @@ public class CRUD_AER {
             ResultSet rset = statement.executeQuery();
             
             //obtenim numero de columnes i nom
-            int colNum = getColumnQuantity(rset);
+            int colNum = rset.getMetaData().getColumnCount();
 
             //Si el nombre de columnes és >0 procedim a llegir i mostrar els registres
             if (colNum > 0) {
-
-                recorrerRegistres(rset,colNum);
-
+                recorrerAzafatas(rset);
             }
+
         } catch (SQLException sqle) {
             Color.RED.println(sqle.getMessage());
         }
     }
 
-    public void readAzafatas()  throws ConnectException, SQLException {
+    public void readAzafatas()  throws Exception {
         readAzafatas(null, null);
     }
 
@@ -301,44 +304,48 @@ public class CRUD_AER {
 
     }
 
-
-    //Aquest mètode auxiliar podria ser utileria del READ, mostra el nom de les columnes i quantes n'hi ha
-    public static int getColumnQuantity(ResultSet rs) throws SQLException {
-        
-        int numberOfColumns = 0;
-        
-        if (rs != null) {   
-            ResultSetMetaData rsMetaData = rs.getMetaData();
-            numberOfColumns = rsMetaData.getColumnCount();   
-        
-            for (int i = 1; i < numberOfColumns + 1; i++) {  
-                String columnName = rsMetaData.getColumnName(i);
-                System.out.print(columnName + ", ");
-            }
-        }
-        
-        System.out.println();
-
-        return numberOfColumns;
-        
-    }
-
     public void recorrerRegistres(ResultSet rs, int ColNum) throws SQLException {
 
-        // Iterate through each row in the ResultSet
         while(rs.next()) {
-            // Iterate through each column in the current row
             for(int i =0; i<ColNum; i++) {
-                // If it's the last column, print the value followed by a newline
                 if(i+1 == ColNum) {
                     System.out.println(rs.getString(i+1));
                 } else {
-                    // Otherwise, print the value followed by a comma and space
                     System.out.print(rs.getString(i+1)+ ", ");
                 }
             } 
         }
         
+    }
+
+
+    public void recorrerAzafatas(ResultSet rs) throws Exception {
+        ArrayList<Azafata> items = new ArrayList<Azafata>();
+        while (rs.next()){
+
+            items.add(
+                new Azafata(
+                    rs.getInt("id"),
+                    rs.getString("nom"),
+                    rs.getString("passaport"),
+                    rs.getString("telefon"),
+                    rs.getString("ig")
+                )
+            );
+        }
+
+        Paginator pag = new Paginator(items.toArray(), 5, GestioDBAER.io);
+        pag.start();
+
+        if (UtilString.answerToBool(
+            GestioDBAER.io.getInputWithPrompt("Vols emmagatzemar aquestes dades?")
+        )){
+            QuickIO.mkdirIfNotExists(new File("xmls"));
+            QuickIO.storeDocument(
+                new File("xmls/"+System.currentTimeMillis()), 
+                QuickIO.azafatasToXML(items)
+                );
+        }
     }
     
 }

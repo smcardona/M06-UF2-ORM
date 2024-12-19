@@ -9,7 +9,17 @@ INSERT INTO PERSONA (nombre, pasaporte, telefono) VALUES
 ('Diego Martínez', 'P7890123', '555-6543'),
 ('Sofía Ramírez', 'P8901234', '555-0123'),
 ('María Torres', 'P9012345', '555-9870'),
-('Carlos Gómez', 'P0123456', '555-7891');
+('Carlos Gómez', 'P0123456', '555-7891'),
+('Paula Navarro', 'P1122334', '555-2233'),
+('Héctor Ruiz', 'P2233445', '555-3344'),
+('Claudia Ortega', 'P3344556', '555-4455'),
+('Fernando Vega', 'P4455667', '555-5566'),
+('Isabel Sánchez', 'P5566778', '555-6677'),
+('Ricardo Ortiz', 'P6677889', '555-7788'),
+('Elena Gutiérrez', 'P7788990', '555-8899'),
+('Víctor Salinas', 'P8899001', '555-9900'),
+('Gabriela Paredes', 'P9900112', '555-1010'),
+('Manuel Castro', 'P1011123', '555-1112');
 
 -- Inserción de datos en la tabla PILOTO
 INSERT INTO PILOTO (persona_id, vuelos, nivel) VALUES
@@ -28,7 +38,17 @@ INSERT INTO AZAFATA (persona_id, ig) VALUES
 (7, '@diego_martinez'),
 (8, '@sofia_ramirez'),
 (9, '@maria_torres'),
-(10, '@carlos_gomez');
+(10, '@carlos_gomez'),
+(11, '@paula_navarro'),
+(12, '@hector_ruiz'),
+(13, '@claudia_ortega'),
+(14, '@fernando_vega'),
+(15, '@isabel_sanchez'),
+(16, '@ricardo_ortiz'),
+(17, '@elena_gutierrez'),
+(18, '@victor_salinas'),
+(19, '@gabriela_paredes'),
+(20, '@manuel_castro');
 
 -- Inserción de datos en la tabla AEROPUERTO
 INSERT INTO AEROPUERTO (ciudad) VALUES

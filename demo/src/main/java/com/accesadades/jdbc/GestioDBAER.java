@@ -18,42 +18,44 @@ public class GestioDBAER {
 
     static CRUD_AER crud;
         
-        public static void main(String[] args) {
-    
-            try {
-                // Carregar propietats des de l'arxiu
-                Properties properties = new Properties();
-                try (InputStream input = GestioDBAER.class.getClassLoader().getResourceAsStream("config.properties")) {
-                //try (FileInputStream input = new FileInputStream(configFilePath)) {
-                    properties.load(input);
-    
-                    // Obtenir les credencials com a part del fitxer de propietats
-                    String dbUrl = properties.getProperty("db.url");
-                    String dbUser = properties.getProperty("db.username");
-                    String dbPassword = properties.getProperty("db.password");
-    
-                    // Conectar amb MariaDB
-                    try (Connection connection = DriverManager.getConnection(dbUrl, dbUser, dbPassword)) {
-                        System.out.println("Conexió exitosa");
-    
-                        String File_create_script = "db_scripts/DB_Schema_HR.sql" ;
-    
-                        InputStream input_sch = GestioDBAER.class.getClassLoader().getResourceAsStream(File_create_script);
-    
-                        crud = new CRUD_AER(connection);
-                        //Aquí farem la creació de la database i de les taules, a més d'inserir dades
-                        crud.createDatabase(input_sch);
-                        while (sortirapp == false) {
-                            menuOptions();
-                        }
+    public static void main(String[] args) {
 
-                    } catch (Exception e) {
-                        System.err.println("Error al conectar: " + e.getMessage());
+        processClean();
+
+        try {
+            // Carregar propietats des de l'arxiu
+            Properties properties = new Properties();
+            try (InputStream input = GestioDBAER.class.getClassLoader().getResourceAsStream("config.properties")) {
+            //try (FileInputStream input = new FileInputStream(configFilePath)) {
+                properties.load(input);
+
+                // Obtenir les credencials com a part del fitxer de propietats
+                String dbUrl = properties.getProperty("db.url");
+                String dbUser = properties.getProperty("db.username");
+                String dbPassword = properties.getProperty("db.password");
+
+                // Conectar amb MariaDB
+                try (Connection connection = DriverManager.getConnection(dbUrl, dbUser, dbPassword)) {
+                    System.out.println("Conexió exitosa");
+
+                    String File_create_script = "db_scripts/DB_Schema_HR.sql" ;
+
+                    InputStream input_sch = GestioDBAER.class.getClassLoader().getResourceAsStream(File_create_script);
+
+                    crud = new CRUD_AER(connection);
+                    //Aquí farem la creació de la database i de les taules, a més d'inserir dades
+                    crud.createDatabase(input_sch);
+                    while (sortirapp == false) {
+                        menuOptions();
                     }
+
+                } catch (Exception e) {
+                    System.err.println("Error al conectar: " + e.getMessage());
                 }
-            } catch (Exception e) {
-                System.err.println("Error al carregar fitxer de propietats: " + e.getMessage());
             }
+        } catch (Exception e) {
+            System.err.println("Error al carregar fitxer de propietats: " + e.getMessage());
+        }
     }
 
     public static void menuOptions() throws Exception {
@@ -117,7 +119,6 @@ public class GestioDBAER {
         }
     
     }
-
 
     public static void menuSelectAzafatas() throws Exception {
 
@@ -271,6 +272,23 @@ public class GestioDBAER {
             );
 
         }
+    }
+
+
+    public static void processClean() {
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+    
+            try {
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            } catch (Exception e) {
+                for (int i = 0; i < 15; i++)
+                System.out.println();
+            }
+            return;
+        }
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
     }
 
 }

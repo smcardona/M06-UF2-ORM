@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
@@ -20,8 +22,12 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Text;
 
+import com.accesadades.jdbc.Azafata;
 import com.accesadades.jdbc.util.exceptions.CancelCommandException;
 import com.accesadades.jdbc.util.exceptions.ExitException;
 import com.accesadades.jdbc.util.executables.Returner;
@@ -183,5 +189,51 @@ public class QuickIO {
       Color.RED.println(e.getLocalizedMessage());
 
     }
+  }
+
+  public static Document azafatasToXML(ArrayList<Azafata> items) throws Exception {
+
+    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    DocumentBuilder builder = factory.newDocumentBuilder();
+
+    // tractament diferenciat per lectura o escriptura
+    DOMImplementation implementation = builder.getDOMImplementation();
+    Document document = implementation.createDocument(null, "azafatas", null);
+    Element root = document.getDocumentElement();
+    document.setXmlVersion("1.0");
+
+
+    for (Azafata item : items) {
+      int id = item.getId();
+      String nom = item.getName();
+      String telefono = item.getPhone();
+      String pass = item.getPassport();
+      String ig = item.getIg();
+
+      Element azafataElement = CrearElement("azafata", root, document);
+      azafataElement.setAttribute("id", Integer.toString(id));
+
+      CrearTextElement("nom", nom, azafataElement, document);
+      CrearTextElement("telefon", telefono, azafataElement, document);
+      CrearTextElement("passaport", pass, azafataElement, document);
+      CrearTextElement("ig", ig, azafataElement, document);
+
+    }
+
+    return document;
+  }
+
+    private static Element CrearTextElement(String etiqueta, String valor, Element pare, Document document) {
+    Element elem = document.createElement(etiqueta);
+    Text text = document.createTextNode(valor);
+    pare.appendChild(elem);
+    elem.appendChild(text);
+    return elem;
+  }
+
+  private static Element CrearElement(String etiqueta, Element pare, Document document) {
+    Element elem = document.createElement(etiqueta);
+    pare.appendChild(elem);
+    return elem;
   }
 }

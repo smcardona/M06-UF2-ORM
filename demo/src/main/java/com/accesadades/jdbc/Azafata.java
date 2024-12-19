@@ -31,8 +31,8 @@ public class Azafata {
 
         this.id = id;
         this.name = name;
-        this.phone = passaport;
-        this.passport = telefono;
+        this.phone = telefono;
+        this.passport = passaport;
         this.ig = ig;
         
     }
