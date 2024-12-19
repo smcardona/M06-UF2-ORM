@@ -318,7 +318,6 @@ public class CRUD_AER {
         
     }
 
-
     public void recorrerAzafatas(ResultSet rs) throws Exception {
         ArrayList<Azafata> items = new ArrayList<Azafata>();
         while (rs.next()){
@@ -348,4 +347,16 @@ public class CRUD_AER {
         }
     }
     
+    public void finishEverything() throws Exception {
+        String query = "DROP DATABASE IF EXISTS santiago";
+
+        try(Statement st = connection.createStatement()){
+
+            st.execute(query);
+            connection.close();
+
+        }
+
+        
+    }
 }

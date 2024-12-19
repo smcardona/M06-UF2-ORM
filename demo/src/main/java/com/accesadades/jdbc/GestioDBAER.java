@@ -12,9 +12,9 @@ import java.util.Properties;
 
 public class GestioDBAER {
 //Com veurem, aquesta booleana controla si volem sortir de l'aplicació.
-    static boolean sortirapp = false;
-    static boolean DispOptions = true;
-    static QuickIO io = new QuickIO();
+    private static boolean sortirapp = false;
+    private static boolean DispOptions = true;
+    public static QuickIO io = new QuickIO();
 
     static CRUD_AER crud;
         
@@ -58,6 +58,7 @@ public class GestioDBAER {
         }
     }
 
+    
     public static void menuOptions() throws Exception {
 
         String message = """
@@ -111,6 +112,7 @@ public class GestioDBAER {
             case 6:
                 //sortim
                 System.out.println("Adèu!!");
+                crud.finishEverything();
                 sortirapp = true;
                 break;
             default:

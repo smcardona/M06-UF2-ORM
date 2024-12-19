@@ -15,3 +15,4 @@ Para compilar a jar: `mvn package`<br>
 ## Notas
 
 - Si no se cierra el programa correctamente, la base de datos persistirá en el dispositivo.
+- !IMPORTANTE! Por favor cambiar los valores de conexion en el fichero de [propiedades](./demo/src/main/resources/config.properties)
