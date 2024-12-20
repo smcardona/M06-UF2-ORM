@@ -4,7 +4,7 @@ El projecto cuenta con plugins para ejectutar el programa usando mvn o para comp
 
 ## Preparación
 
-Primero que nada asegurarse de estar en la misma carpeta del pom.xml (demo)
+Primero que nada asegurarse de estar en la misma carpeta del pom.xml (gestor_jdbc)
 
 `cd gestor_jdbc` <br>
 

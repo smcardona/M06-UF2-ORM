@@ -1,3 +1,4 @@
 # M06-UF2-JDBC
 *.class
 *target*
+*.vscode
