@@ -7,6 +7,7 @@ import com.accesadades.jdbc.Azafata.Filter;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Properties;
 
 
@@ -49,12 +50,12 @@ public class GestioDBAER {
                         menuOptions();
                     }
 
-                } catch (Exception e) {
+                } catch (SQLException e) {
                     System.err.println("Error al conectar: " + e.getMessage());
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error al carregar fitxer de propietats: " + e.getMessage());
+            System.err.println("Error en el programa: " + e.getMessage());
         }
     }
 
@@ -71,14 +72,14 @@ public class GestioDBAER {
                 2. CONSULTAR DADES (READ)
                 3. MODIFICAR DADES (UPDATE)
                 4. ELIMINAR DADES (DELETE)
-                5. INSERIR NOVES DADEs (CREATE)
+                5. INSERIR NOVES DADES (CREATE)
                 6. SORTIR
                 """;
         
         System.out.println(message);
 
 
-        int opcio = Integer.parseInt(io.getInputWithPrompt("Introdueix l'opcio tot seguit >> "));
+        int opcio = io.processAndReturn("Introdueix l'opcio tot seguit >> ", Integer::parseInt);
 
         switch(opcio) {
             case 1:
@@ -110,7 +111,6 @@ public class GestioDBAER {
                 break;
 
             case 6:
-                //sortim
                 System.out.println("Adèu!!");
                 crud.finishEverything();
                 sortirapp = true;

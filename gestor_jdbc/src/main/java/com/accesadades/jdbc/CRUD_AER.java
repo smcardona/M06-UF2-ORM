@@ -86,7 +86,7 @@ public class CRUD_AER {
         //el modifiquem a false
         connection.setAutoCommit(false);
 
-        try (PreparedStatement prepstat = connection.prepareStatement(query)) {
+        try (PreparedStatement prepstat = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
 
             prepstat.setString(1, persona.getName());
             prepstat.setString(2, persona.getPassport());
@@ -133,7 +133,7 @@ public class CRUD_AER {
         //el modifiquem a false
         connection.setAutoCommit(false);
 
-        try (PreparedStatement prepstat = connection.prepareStatement(query)) {
+        try (PreparedStatement prepstat = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
 
             // Primero inserta la azafata como persona y obtiene la id
             int id = insertPersona(azafata);
@@ -337,11 +337,11 @@ public class CRUD_AER {
         pag.start();
 
         if (UtilString.answerToBool(
-            GestioDBAER.io.getInputWithPrompt("Vols emmagatzemar aquestes dades?")
+            GestioDBAER.io.getInputWithPrompt("Vols emmagatzemar aquestes dades? ")
         )){
             QuickIO.mkdirIfNotExists(new File("xmls"));
             QuickIO.storeDocument(
-                new File("xmls/"+System.currentTimeMillis()), 
+                new File("xmls/"+System.currentTimeMillis()+".xml"), 
                 QuickIO.azafatasToXML(items)
                 );
         }
