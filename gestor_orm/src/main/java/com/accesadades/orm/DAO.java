@@ -9,13 +9,13 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 import com.accesadades.orm.model.Property;
-import com.accesadades.orm.model.Property.PropertyProvider;
 import com.accesadades.orm.util.Color;
 import com.accesadades.orm.util.exceptions.DatabaseException;
 import com.accesadades.orm.util.exceptions.ExitException;
 import com.accesadades.orm.util.executables.Executable;
 
-public class DAO<T extends PropertyProvider> {
+
+public class DAO<T> {
 
     private static SessionFactory factory;
     private static Session session;
@@ -28,6 +28,10 @@ public class DAO<T extends PropertyProvider> {
         this.type = type;
     }
 
+    public static DAO<?> with(Class<?> type) {
+        return new DAO<>(type);
+    }
+
 
     public static void endSession() {
         if (session != null && session.isConnected()) {
@@ -36,7 +40,7 @@ public class DAO<T extends PropertyProvider> {
     }
     
     public T getById(Object id) {
-        return session.getReference(type, id);
+        return session.find(type, id);
     }
 
     public List<T> getAll() {
@@ -57,15 +61,15 @@ public class DAO<T extends PropertyProvider> {
 
     }
 
-    public void save(T object) {
+    public void save(Object object) {
         executeAction(() -> session.persist(object));
     }
 
-    public void update(T object) {
+    public void update(Object object) {
         executeAction(() -> session.merge(object));
     }
 
-    public void remove(T object) {
+    public void remove(Object object) {
         executeAction(() -> session.remove(object));
     }
 
@@ -111,13 +115,6 @@ public class DAO<T extends PropertyProvider> {
 
         
     }
-
-    public static List<?> getAllFrom (Class<?> clazz) {
-        Query<?> query = session.createQuery("FROM "+clazz.getSimpleName(), clazz);
-        return query.list();
-    }
-
-
     
 
 }

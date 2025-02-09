@@ -7,4 +7,6 @@ package com.accesadades.orm.util.exceptions;
 public class CancelCommandException extends Exception {
   
   public CancelCommandException(String msg) { super(msg); }
+
+  public CancelCommandException() {}
 }

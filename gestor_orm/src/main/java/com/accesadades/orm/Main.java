@@ -1,23 +1,10 @@
 package com.accesadades.orm;
 
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Set;
-
-import javax.management.RuntimeErrorException;
-
-/* 
- * IDEAS PARA QUE NO SE ME OLVIDEN
- * - Cuando hay una entidad que contiene otra entidad (vuelo > aeropuertos),
- *   dar opción de si crear el aeropuerto a mano llamando a otra funcion de crear para esa entidad o
- *   dar opción de listar los existentes (Paginator con entity.getAll)
- *   tal ves hacer campos requeridos, como los aeropuertos, cancelar el aeropuerto llevaria a cancelar el comando
- *   hacer campos opcionales
- */
-
 
 import com.accesadades.orm.model.Aeropuerto;
 import com.accesadades.orm.model.Avion;
@@ -35,13 +22,12 @@ import com.accesadades.orm.util.exceptions.ExitException;
 
 public class Main {
 
-  private static boolean dispOptions = true;
   public static QuickIO io = new QuickIO(new String[]{ "cancel" }, new String[]{ "exit" });
 
-  private static DAO<Azafata> azafataDao = new DAO<>(Azafata.class);
-  private static DAO<Avion> avionDao = new DAO<>(Avion.class);
-  private static DAO<Aeropuerto> aeropuertoDao = new DAO<>(Aeropuerto.class);
-  private static DAO<Vuelo> vueloDao = new DAO<>(Vuelo.class);
+  private static final Class<?>[] ENTITATS = {
+    Avion.class, Aeropuerto.class, Azafata.class, Vuelo.class
+  };
+
 
   public static void main(String[] args) {
 
@@ -56,110 +42,130 @@ public class Main {
       e.printStackTrace();
     }
 
-    
+    //DAO.finishEverything();
 
   }
 
     
   public static void menuOptions() throws Exception {
 
-      String message = """
-                ==================
-                AEROPORT EL RAPT
-                ==================
+    String message = """
+      ==================
+      AEROPORT EL RAPT
+      ==================
 
-                OPCIONS
-                1. CARREGAR DADES DE PROVA
-                2. CONSULTAR DADES (READ)
-                3. MODIFICAR DADES (UPDATE)
-                4. ELIMINAR DADES (DELETE)
-                5. INSERIR NOVES DADES (CREATE)
-                6. SORTIR
-                """;
+      OPCIONS
+      1. CARREGAR DADES DE PROVA
+      2. INSERIR NOVES DADES (CREATE)
+      3. CONSULTAR DADES (READ)
+      4. MODIFICAR DADES (UPDATE)
+      5. ELIMINAR DADES (DELETE)
+      6. SORTIR
+      """;
+      
+      System.out.println(message);
+
+
+      int opcio = io.processAndReturn("Introdueix l'opcio tot seguit >> ", Integer::parseInt);
+
+      switch(opcio) {
+        case 1:
+          // TODO: datos demo
+          break;
+
         
-        System.out.println(message);
+        case 2:
+          menuInsert();
+          break;
+      
+        case 3:
+          menuSelect();
+          break;
 
+        case 4:
+          menuEdit();
+          break;
 
-        int opcio = io.processAndReturn("Introdueix l'opcio tot seguit >> ", Integer::parseInt);
+        case 5:
+          menuDelete();
+          break;
 
-        switch(opcio) {
-            case 1:
-                // TODO: datos demo
-                break;
-        
-            case 2:
-                menuSelect();
-                break;
+        case 6:
+          throw new ExitException();
 
-            case 3:
-                menuEditAzafata();
-                break;
+        default:
+          System.out.print("Opcio no vàlida");
+          menuOptions();
 
-            case 4:
-                menuDeleteAzafata();
-                break;
-
-            case 5:
-                menuInsertAzafata();
-                break;
-
-            case 6:
-                throw new ExitException();
-            default:
-                System.out.print("Opcio no vàlida");
-                menuOptions();
-        }
+      }
     
     }
 
-  public static void menuSelect() throws Exception {
+  public static void menuSelect() throws ExitException, CancelCommandException  {
 
-        int opcio = 0;
-        dispOptions = true;
+    // pide un tipo, lo instancia, y extrae las propiedades
+    Class<?> type = menuSelectType();
+    String entName = type.getSimpleName();
+    System.out.println("Obtenint dades de "+entName);
 
-        while (dispOptions) {
+    Property<?>[] props = instanceFromType(type).getProperties();
 
-            System.out.print("""
-                    Com vols obtenir la informació de la azafata
-                    1. Per ID
-                    2. Per nom
-                    3. Per passaport
-                    4. Sense filtrar
-                    5. Sortir
-                    """);
-
-            opcio = Integer.parseInt(
-                io.getInputWithPrompt("Introdueix l'opció tot seguit >> ")
-            );
-
-            switch(opcio) {
-                case 1:
-                    System.out.println(
-                        azafataDao.getById((io.processAndReturn("ID >> ", Integer::parseInt)))
-                    );
-                    break;
-                case 2:
-                    //azafataDao.filterBy(null, aeropuertoDao)(io.getInputWithPrompt("Nom >> "), Filter.NOMBRE);
-                    break;
-                case 3:
-                    //crud.readAzafatas(io.getInputWithPrompt("Passaport >> "), Filter.PASAPORTE);
-                    break;
-                case 4: 
-                    //crud.readAzafatas();
-                    break;
-                case 5:
-                    return;
-                default:
-                    System.out.print("Opcio no vàlida");
-            }
-                
-            dispOptions = UtilString.answerToBool(
-                io.getInputWithPrompt("Vols fer altra consulta? (S o N):"));
+    while (true) {
+      System.out.println("Per quin camp vols filtrar la selecció ?");
+      System.out.println(String.format("1. ID de %s%n", entName));
+  
+      for (int i = 2; i < props.length +2; i++) {
+        Property<?> p = props[i-2];
+  
+        System.out.println(String.format(
+          "%d. %s de %s%n", i, p.displayName, entName));
+      }
+  
+      int choice = io.processAndReturn("Opció > ", val -> {
+        int c = Integer.parseInt(val);
+        if (c < 1 || c >= props.length+2) throw new IllegalArgumentException("Opció invalida");
+        return c;
+      });
+  
+  
+      if (choice == 1) {
+        int id = io.processAndReturn("ID >> ", Integer::parseInt);
+        
+        Object result = DAO.with(type).getById(id);
+        if (result == null) 
+          Color.RED.println("Cap coincidencia amb aquesta ID :(");
+        
+        else 
+          System.out.println(result.toString());
+      }
+      else {
+        Property<?> p = props[choice-2]; 
+        String value = io.getInputWithPrompt(p.displayName+" >> ");
+  
+        List<?> results = DAO.with(type).filterBy(p, value);
+        if (results.size() == 0) 
+          Color.RED.println("Cap coincidencia amb aquest "+p.displayName);
+  
+        else {
+          System.out.println(results.size() +" coincidencies");
+          for (Object item: results) 
+            System.out.println(item.toString());
         }
+  
+      }
+  
+      
+      boolean more = io.processAndReturn("Vols continuar buscant instancies de "+entName + " ? ",
+        UtilString::answerToBool);
+  
+      if (!more) break;
     }
 
+
+  }
+
   // Funcion que setea las propiedades de un objeto
-  public static void fillProperties(PropertyProvider instance) throws ExitException {
+  public static void fillProperties(PropertyProvider instance) throws ExitException, CancelCommandException {
 
     // instance puede ser un new o un getReference
     
@@ -192,6 +198,7 @@ public class Main {
             //* POR FIN, EL TIPO DE ELEMENTOS QUE CONTIENE EL SET
             Class<?> genericClass = (Class<?>) genericType;
             
+            @SuppressWarnings("unchecked")
             Set<Object> set = (Set<Object>) prop.get();
 
             // Rellena el set de items
@@ -210,14 +217,15 @@ public class Main {
               continue; // Vuelve a pedir el campo
             }
 
-            prop.set(set); // no se si es necesario esto
+            prop.set(set); // no se si es necesario, pero por si acaso
             break; // necesario para acabar el bucle de required
 
           } 
-          //* Si es otro tipo de campos: Strings, ints, etc
+          //* Si es otro tipo de campo: Strings, ints, etc
           else {
 
-            String prompt = String.format("%s %s >> ", instance.getClass().getSimpleName(), prop.displayName);
+            String prompt = String.format("%s %s %s>> ", instance.getClass().getSimpleName(), prop.displayName,
+              (prop.get() != null) ? "("+prop.get()+") " : "");
             io.requestAndSetValue(prompt, (value) -> prop.set(value));
             break;
           }
@@ -229,11 +237,10 @@ public class Main {
           System.out.println("Estas segur que vols cancel·lar aquest comand? Es perdran els valors introduits per: "+
             instance.getClass().getSimpleName());
 
+          if (io.processAndReturn("Cancel·lar (si / no) :", UtilString::answerToBool)) 
+            throw new CancelCommandException();
 
-
-
-        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-        | InvocationTargetException | NoSuchMethodException | SecurityException | NoSuchFieldException e) {
+        } catch (SecurityException | NoSuchFieldException e) {
           throw new RuntimeException("Error en el programa, provocat pel tipatge y propietats al intentar omplir els camps d'una entitat");
         } 
         
@@ -243,37 +250,35 @@ public class Main {
   }
 
   // Funcion que genera una instancia o la obtiene de un listado en la base de datos
-  // Ignorar los throws xd
-  public static Object genOrGetInstanceFrom(Class<?> type) 
-    throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, 
-    NoSuchMethodException, SecurityException, ExitException, CancelCommandException {
+  public static PropertyProvider genOrGetInstanceFrom(Class<?> type) 
+    throws ExitException, CancelCommandException {
 
     if (!PropertyProvider.class.isAssignableFrom(type)) {
       throw new RuntimeException("La classe no implementa propietats: "+type.getSimpleName());
     }
     
     
-    boolean generate = io.processAndReturn("Vols generar un nou \"" + type.getSimpleName() + "\" ? ",
+    boolean generate = io.processAndReturn("Vols generar un/a nou/va \"" + type.getSimpleName() + "\" ? ",
       UtilString::answerToBool);
 
-    Object instance = null;
+    PropertyProvider instance = null;
 
     if (generate) {
       // Crea una instancia del tipo que requiera la propiedad
-      instance =  type.getConstructor().newInstance();
+      instance = instanceFromType(type) ;
       // Rellena las propiedades de la instancia
-      fillProperties((PropertyProvider) instance);
+      fillProperties(instance);
     }
     // da un listado de elementos 
     else {
 
       System.out.println("Triant de ja existents");
 
-      List<?> results = DAO.getAllFrom(type);
+      List<?> results = DAO.with(type).getAll();
       Paginator<?> pag = new Paginator<>(results.toArray(), 5, io);
       // Muestra listado con los resultados que enuentra de la base de datos
-      pag.start();
-      instance = pag.getChoice();
+      pag.chose();
+      instance = (PropertyProvider) pag.getChoice();
 
     }
 
@@ -281,126 +286,130 @@ public class Main {
 
   }
 
-    public static void menuEditAzafata() throws Exception {
+  public static void menuEdit() throws ExitException, CancelCommandException  {
 
-        dispOptions = true;
+    Class<?> type = menuSelectType();
+    String entName = type.getSimpleName();
+    System.out.println("Modificant dades de "+entName);
 
-        while (dispOptions) {
+    while (true) {
 
-            int id = io.processAndReturn("ID Hostessa >> ", Integer::parseInt);
+      int id = io.processAndReturn(String.format(
+        "ID de %s", type.getSimpleName()), Integer::parseInt);
 
-            Azafata toEdit = azafataDao.getById(id);
+      PropertyProvider instance = (PropertyProvider) DAO.with(type).getById(id);
+      fillProperties(instance);
 
-            if (toEdit == null) {
-                System.out.println("Azafata no encontrada con este ID");
-                continue;
-            }
+      System.out.println("Objecte modificat correctament!");
+      System.out.println(instance.toString());
 
-            io.requestAndSetValue(
-                String.format("Nom (%s) >> ", toEdit.getName()),
-                name -> {
-                    if (name == null || name.isBlank()) return;
-                    toEdit.setName(name);
-                }
-            );
-            
 
-            io.requestAndSetValue(
-                String.format("Passaport (%s) >> ", toEdit.getPassport()),
-                pass -> {
-                    if (pass == null || pass.isBlank()) return;
-                    toEdit.setPassport(pass);
-                }
-            );
+      boolean more = io.processAndReturn("Vols continuar editant instancies de "+entName + " ? ",
+        UtilString::answerToBool);
 
-            io.requestAndSetValue(
-                String.format("Telèfon (%s) >> ", toEdit.getPhone()),
-                pho -> {
-                    if (pho == null || pho.isBlank()) return;
-                    toEdit.setPhone(pho);
-                }
-            );
-
-            io.requestAndSetValue(
-                String.format("Ig (%s) >> ", toEdit.getIg()),
-                ig -> {
-                    if (ig == null || ig.isBlank()) return;
-                    toEdit.setIg(ig);
-                }
-            );
-
-            azafataDao.update(toEdit);
-
-            dispOptions = UtilString.answerToBool(
-                io.getInputWithPrompt("Vols continuar editant hostesses? ")
-            );
-            
-
-        }
-
+      if (!more) break;
+      
     }
 
-    public static void menuDeleteAzafata() throws Exception {
+  }
 
-        dispOptions = true;
-        
+  public static void menuDelete() throws Exception {
 
-        while (dispOptions) {
+    Class<?> type = menuSelectType();
+    String entName = type.getSimpleName();
+    System.out.println("Eliminant dades de "+entName);
 
-            
-            int id = io.processAndReturn("ID Hostessa a eliminar >> ", Integer::parseInt);
+    while (true) {
 
-            //azafataDao.deleteAzafata(id);
+      int id = io.processAndReturn(String.format(
+        "ID de %s", type.getSimpleName()), Integer::parseInt);
 
-            dispOptions = UtilString.answerToBool(
-                io.getInputWithPrompt("Vols continuar eliminant hostesses? ")
-            );
 
-        }
+      PropertyProvider instance = (PropertyProvider) DAO.with(type).getById(id);
+
+      DAO.with(type).remove(instance);
+
+      System.out.println("Objecte eliminat correctament!");
+      System.out.println(instance.toString());
+
+      boolean more = io.processAndReturn("Vols continuar editant instancies de "+entName + " ? ",
+        UtilString::answerToBool);
+
+      if (!more) break;
+      
     }
 
-    public static void menuInsertAzafata() throws Exception {
-        
-        dispOptions = true;
+  
+  }
 
-        while (dispOptions) {
+  public static void menuInsert() throws ExitException, CancelCommandException {
 
-            
-            String nom = io.getInputWithPrompt("Nom >> ");
-
-            String pass = io.getInputWithPrompt("Passaport >> ");
-
-            String tel = io.getInputWithPrompt("Telèfon >> ");
-
-            String ig = io.getInputWithPrompt("Ig >> ");
-
-
-            Azafata toInsert = new Azafata(nom, pass, tel, ig);
-
-            //crud.insertAzafata(toInsert);
-
-            dispOptions = UtilString.answerToBool(
-                io.getInputWithPrompt("Vols afegir més hostesses? ")
-            );
-
-        }
-    }
-
-
-    public static void processClean() {
-        String os = System.getProperty("os.name").toLowerCase();
-        if (os.contains("win")) {
+    Class<?> type = menuSelectType();
+    String entName = type.getSimpleName();
+    System.out.println("Creant "+entName);
     
-            try {
-                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
-            } catch (Exception e) {
-                for (int i = 0; i < 15; i++)
-                System.out.println();
-            }
-            return;
-        }
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
+    while (true) {
+      
+      PropertyProvider instance = instanceFromType(type);
+      fillProperties(instance);
+      DAO.with(type).save(instance);
+
+      System.out.println("Objecte agregat correctament!");
+      System.out.println(instance.toString());
+      
+
+      boolean more = io.processAndReturn("Vols afegir més instancies de "+entName + " ? ",
+        UtilString::answerToBool);
+
+      if (!more) break;
+
     }
+  }
+
+  public static Class<?> menuSelectType() throws ExitException, CancelCommandException {
+
+    System.out.println();
+    System.out.println("De quina entitat vols fer aquesta operació ?");
+
+    for (int i = 1; i <= ENTITATS.length; i++) {
+      System.out.printf("%d. %s%n", i, ENTITATS[i].getSimpleName());
+    }
+
+    int choice = io.processAndReturn("Opció > ", val -> {
+      int c = Integer.parseInt(val);
+      if (c < 1 || c >= ENTITATS.length+1) throw new IllegalArgumentException("Opció invalida");
+      return c;
+    });
+
+    return ENTITATS[choice-1];
+  }
+
+  public static PropertyProvider instanceFromType(Class<?> type) {
+
+    // Esto se puede hacer más facilmente con un Map o cosas asi, TODO si hay que seguir escalando el programa
+
+    if (type == Avion.class) return new Avion();
+    if (type == Aeropuerto.class) return new Aeropuerto();
+    if (type == Azafata.class) return new Azafata();
+    if (type == Vuelo.class) return new Vuelo();
+
+    throw new RuntimeException("Error, tipus no valid com entitat: "+type.getSimpleName());
+    
+  }
+
+  public static void processClean() {
+    String os = System.getProperty("os.name").toLowerCase();
+    if (os.contains("win")) {
+
+      try {
+        new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+      } catch (Exception e) {
+        for (int i = 0; i < 15; i++) System.out.println();
+      }
+      return;
+    }
+    System.out.print("\033[H\033[2J");
+    System.out.flush();
+  }
 
 }

@@ -35,7 +35,7 @@ public class Azafata implements Serializable, Property.PropertyProvider {
   @Column
   private String ig;
 
-  @ManyToOne(cascade=CascadeType.PERSIST)
+  @ManyToOne(cascade=CascadeType.ALL)
   @JoinColumn(name="vuelo")
   private Vuelo vuelo;
 
@@ -90,7 +90,6 @@ public class Azafata implements Serializable, Property.PropertyProvider {
   // PROPIEDADES
   @Transient
   private final Property<?>[] editableProperties = {
-    //new Property<>("id", "ID", this::setId, this::getId, Integer::parseInt),
     new Property<>("name", "nom", this::setName, this::getName, getClass()),
     new Property<>("passport", "passaport", this::setPassport, this::getPassport, getClass()),
     new Property<>("phone", "telèfon", this::setPhone, this::getPhone, getClass()),

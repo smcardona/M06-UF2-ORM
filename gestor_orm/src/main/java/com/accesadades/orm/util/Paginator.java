@@ -20,7 +20,8 @@ public class Paginator<T> {
 
   private int calcMaxPage () { return (items.length/PAGE_SIZE) + (items.length%PAGE_SIZE > 0 ? 1 : 0); }
 
-  public void start() throws ExitException, CancelCommandException {
+  // Exige escoger un item de los de la lista, los indices son de los items y no de las paginas
+  public void chose() throws ExitException, CancelCommandException {
     page = 0;
     pick = null;
     MAX_PAGE = calcMaxPage();
@@ -53,15 +54,15 @@ public class Paginator<T> {
 
         default:
 
-          if (UtilString.isInteger(input)) {
-            int pick = Integer.parseInt(input);
-            if (pick >= 0 && pick < items.length) {
-              this.pick = items[pick];
-              return;
-            }
-            else Color.RED.println("Index fora del rang de elements");
+        if (UtilString.isInteger(input)) {
+          int pick = Integer.parseInt(input);
+          if (pick >= 0 && pick < items.length) {
+            this.pick = items[pick];
+            return;
           }
-          else Color.RED.println("Entrada invàlida ...");
+          else Color.RED.println("Index fora del rang de elements");
+        }
+        else Color.RED.println("Entrada invàlida ...");
       }
     }
   }
@@ -81,5 +82,50 @@ public class Paginator<T> {
 
   public T getChoice() {
     return pick;
+  }
+
+  // Solo muestra los items por paginas, permite navegacion facil entre paginas
+  public void show () throws ExitException, CancelCommandException {
+    page = 0;
+    pick = null;
+    MAX_PAGE = calcMaxPage();
+    
+    while (true) {
+
+      if (items.length == 0) {
+        Color.RED.println("No hi ha cap entrada a les dades");
+        return;
+      }
+      
+      showPage(items);
+      System.out.println();
+      System.out.println("   '<' | '>' per moure entre pàgines");
+      System.out.println("Tria el index del element que vulguis fer servir"); 
+  
+      String input = io.getInputWithPrompt("(idx, <, >, sortir): ");
+
+      switch (input) {
+        case ">":
+          page = (page+1) % (MAX_PAGE);
+          break;
+
+        case "<":
+          page = (page-1+MAX_PAGE) % (MAX_PAGE);
+          break;
+      
+        case "sortir": 
+          System.out.println("Sortint de les mostres");
+          return;
+
+        default:
+
+        if (UtilString.isInteger(input)) {
+          int pick = Integer.parseInt(input);
+          if (pick >= 0 && pick <= MAX_PAGE) page = pick-1;
+          else Color.RED.println("Index fora del rang de pàgines");
+        }
+        else Color.RED.println("Entrada invàlida ...");
+      }
+    }
   }
 }

@@ -39,7 +39,7 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
   private Aeropuerto destino;
 
   // Aviones usados en este vuelo
-  @ManyToMany(cascade=CascadeType.PERSIST, fetch=FetchType.LAZY)
+  @ManyToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY)
   @JoinTable(
     name = "vuelo_avion",
     joinColumns = @JoinColumn(name = "vuelo_id"),
@@ -47,7 +47,7 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
   )
   private Set<Avion> aviones = new HashSet<>();
 
-  @OneToMany(mappedBy="vuelo", cascade=CascadeType.PERSIST, fetch=FetchType.LAZY)
+  @OneToMany(mappedBy="vuelo", cascade=CascadeType.ALL, fetch=FetchType.LAZY)
   private Set<Azafata> azafatas = new HashSet<>();
 
   public int getId() {
