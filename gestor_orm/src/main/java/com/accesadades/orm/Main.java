@@ -52,15 +52,13 @@ public class Main {
         break;
       }
 
-
     }
-
 
     //DAO.finishEverything();
 
   }
 
-    
+
   public static void menuOptions() throws ExitException, CancelCommandException  {
 
     String message = """
@@ -193,7 +191,7 @@ public class Main {
   }
 
   // Funcion que setea las propiedades de un objeto
-  public static void fillProperties(PropertyProvider instance) throws ExitException, CancelCommandException {
+  public static void fillProperties(PropertyProvider instance, boolean isNewInstance) throws ExitException, CancelCommandException {
 
     // instance puede ser un new o un getReference
     
@@ -210,7 +208,7 @@ public class Main {
             // funcion larga pero util
             Object value = genOrGetInstanceFrom(type);
 
-            if (value == null && prop.isRequired()) {
+            if (value == null && prop.isRequired() && isNewInstance) {
               Color.RED.println("Aquest camp es requerit !!!");
               continue; // Vuelve a pedir el campo
             } 
@@ -235,12 +233,12 @@ public class Main {
               Object item = genOrGetInstanceFrom(genericClass);
               if (item != null) { set.add(item); }
 
-              addMore = io.processAndReturn("Vols generar un/a altre \"" + genericClass.getSimpleName() + "\" ? ",
+              addMore = io.processAndReturn("Vols afegir un/a altre \"" + genericClass.getSimpleName() + "\" ? ",
                 UtilString::answerToBool);
 
             } while (addMore);
 
-            if (set.isEmpty() && prop.isRequired()) {
+            if (set.isEmpty() && prop.isRequired() && isNewInstance) {
               Color.RED.println("Aquest camp es requerit !!!");
               continue; // Vuelve a pedir el campo
             }
@@ -251,12 +249,18 @@ public class Main {
           } 
           //* Si es otro tipo de campo: Strings, ints, etc
           else {
-
             String prompt = String.format("%s %s %s>> ", instance.getClass().getSimpleName(), prop.displayName,
-              (prop.get() != null) ? "("+prop.get()+") " : "");
+                (prop.get() != null) ? "("+prop.get()+") " : "");
+
+            if (!isNewInstance) {
+                ;
+                boolean modify = io.processAndReturn(prompt + "(Vols modificar aquest camp?) ", UtilString::answerToBool);
+                if (!modify) break;
+            }
+
             io.requestAndSetValue(prompt, (value) -> prop.set(value));
             break;
-          }
+        }
 
         } catch (CancelCommandException e) {
 
@@ -273,7 +277,7 @@ public class Main {
         } 
         
 
-      } while (prop.isRequired());
+      } while (prop.isRequired() && isNewInstance);
     }
   }
 
@@ -285,7 +289,8 @@ public class Main {
     }
     
     
-    boolean generate = io.processAndReturn("Vols generar un/a nou/va \"" + type.getSimpleName() + "\" ? ",
+    boolean generate = io.processAndReturn("Vols generar un/a nou/va \"" + type.getSimpleName() + "\" ? "+
+      "Cas contrari, es mostrará una llista amb existents per triar: ",
       UtilString::answerToBool);
 
     PropertyProvider instance = null;
@@ -294,7 +299,7 @@ public class Main {
       // Crea una instancia del tipo que requiera la propiedad
       instance = instanceFromType(type) ;
       // Rellena las propiedades de la instancia
-      fillProperties(instance);
+      fillProperties(instance, true);
     }
     // da un listado de elementos 
     else {
@@ -322,10 +327,16 @@ public class Main {
     while (true) {
 
       int id = io.processAndReturn(String.format(
-        "ID de %s", type.getSimpleName()), Integer::parseInt);
+        "ID de %s: ", type.getSimpleName()), Integer::parseInt);
 
       PropertyProvider instance = (PropertyProvider) DAO.with(type).getById(id);
-      fillProperties(instance);
+
+      if (instance == null) {
+        System.out.println("Cap entrada trobada amb aquest ID, torna a intentar");
+        continue;
+      }
+
+      fillProperties(instance, false);
 
       System.out.println("Objecte modificat correctament!");
       System.out.println(instance.toString());
@@ -346,27 +357,43 @@ public class Main {
     String entName = type.getSimpleName();
     System.out.println("Eliminant dades de "+entName);
 
-    while (true) {
+    System.out.println("Com vols eliminar les dades?");
+    System.out.println("1. Per ID");
+    System.out.println("2. Eliminar tots els valors de " + entName);
 
-      int id = io.processAndReturn(String.format(
-        "ID de %s", type.getSimpleName()), Integer::parseInt);
+    int choice = io.processAndReturn("Opció > ", val -> {
+      int c = Integer.parseInt(val);
+      if (c < 1 || c > 2) throw new IllegalArgumentException("Opció invalida");
+      return c;
+    });
 
+    if (choice == 1) {
+      while (true) {
+        int id = io.processAndReturn(String.format(
+          "ID de %s: ", type.getSimpleName()), Integer::parseInt);
 
-      PropertyProvider instance = (PropertyProvider) DAO.with(type).getById(id);
+        PropertyProvider instance = (PropertyProvider) DAO.with(type).getById(id);
 
-      DAO.with(type).remove(instance);
+        if (instance == null) {
+          System.out.println("Cap entrada trobada amb aquest ID, torna a intentar");
+          continue;
+        }
 
-      System.out.println("Objecte eliminat correctament!");
-      System.out.println(instance.toString());
+        DAO.with(type).remove(instance);
 
-      boolean more = io.processAndReturn("Vols continuar editant instancies de "+entName + " ? ",
-        UtilString::answerToBool);
+        System.out.println("Objecte eliminat correctament!");
+        System.out.println(instance.toString());
 
-      if (!more) break;
-      
+        boolean more = io.processAndReturn("Vols continuar eliminant instancies de "+entName + " ? ",
+          UtilString::answerToBool);
+
+        if (!more) break;
+      }
+    } 
+    else if (choice == 2) {
+      DAO.with(type).clearAll();
+      System.out.println("Tots els valors de " + entName + " han estat eliminats correctament!");
     }
-
-  
   }
 
   public static void menuInsert() throws ExitException, CancelCommandException {
@@ -378,7 +405,7 @@ public class Main {
     while (true) {
       
       PropertyProvider instance = instanceFromType(type);
-      fillProperties(instance);
+      fillProperties(instance, true);
       DAO.with(type).save(instance);
 
       System.out.println("Objecte agregat correctament!");
@@ -478,16 +505,16 @@ public class Main {
     vuelo1.setDestino(aeropuerto2);
     vuelo1.getAvion().add(avion1);
     vuelo1.getAvion().add(avion2);
-    vuelo1.getAzafatas().add(azafata1);
-    vuelo1.getAzafatas().add(azafata2);
+    vuelo1.addAzafata(azafata1);
+    vuelo1.addAzafata(azafata2);
 
     Vuelo vuelo2 = new Vuelo();
     vuelo2.setOrigen(aeropuerto2);
     vuelo2.setDestino(aeropuerto3);
     vuelo2.getAvion().add(avion3);
     vuelo2.getAvion().add(avion4);
-    vuelo2.getAzafatas().add(azafata2);
-    vuelo2.getAzafatas().add(azafata3);
+    vuelo2.addAzafata(azafata2);
+    vuelo2.addAzafata(azafata3);
 
     DAO.with(Vuelo.class).save(vuelo1);
     DAO.with(Vuelo.class).save(vuelo2);

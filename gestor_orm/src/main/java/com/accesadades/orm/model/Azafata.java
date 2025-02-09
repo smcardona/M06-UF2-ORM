@@ -43,10 +43,10 @@ public class Azafata implements Serializable, Property.PropertyProvider {
 
   public Azafata() {}
 
-  public Azafata(String name, String passaport, String telefono, String ig) {
+  public Azafata(String name, String passport, String phone, String ig) {
     this.name = name;
-    this.phone = passaport;
-    this.passport = telefono;
+    this.passport = passport;
+    this.phone = phone;
     this.ig = ig;
   }
 
@@ -93,6 +93,10 @@ public class Azafata implements Serializable, Property.PropertyProvider {
     this.ig = ig;
   }
 
+  public void setVuelo(Vuelo vuelo) {
+    this.vuelo = vuelo;
+  }
+
 
   @Override
   public String toString() {
@@ -124,7 +128,5 @@ public class Azafata implements Serializable, Property.PropertyProvider {
   public Property<?>[] getEditableProperties() { return editableProperties; }
   
   public Property<?>[] getProperties() { return properties; }
-
-
 
 }

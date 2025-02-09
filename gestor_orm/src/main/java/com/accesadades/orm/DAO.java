@@ -9,9 +9,7 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 import com.accesadades.orm.model.Property;
-import com.accesadades.orm.util.Color;
 import com.accesadades.orm.util.exceptions.DatabaseException;
-import com.accesadades.orm.util.exceptions.ExitException;
 import com.accesadades.orm.util.executables.Executable;
 
 
@@ -48,6 +46,12 @@ public class DAO<T> {
         return query.list();
     }
 
+    public void clearAll() {
+        @SuppressWarnings("deprecation")
+        Query<?> query = session.createQuery("DELETE FROM " + type.getSimpleName());
+        executeAction(() -> query.executeUpdate());
+    }
+
     public List<T> filterBy(Property<?> field, Object value) {
 
         String hql = String.format("FROM %s WHERE %s = :val", 
@@ -71,16 +75,6 @@ public class DAO<T> {
 
     public void remove(Object object) {
         executeAction(() -> session.remove(object));
-    }
-
-    public T newInstance() throws ExitException {
-        try {
-            // Esto es para hacer new T(); pero java no permite eso pues T es muchas cosas
-            return type.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            Color.RED.println("Error intern del DAO: La entitat no té Pojo -> "+type.getSimpleName());
-            throw new ExitException("Error del programa, Pojo requerit");
-        }
     }
 
 
@@ -108,12 +102,16 @@ public class DAO<T> {
 
             session.close();
         }
-        if (factory != null) factory.close();
 
         factory = null;
         session = null;
+    }
 
-        
+    //! Funcion peligrosa para borrar todos los datos de una tabla
+    public static void clearTables(Class<?>[] tableClasses) {
+        for (Class<?> type: tableClasses) {
+            DAO.with(type).clearAll();
+        }
     }
     
 

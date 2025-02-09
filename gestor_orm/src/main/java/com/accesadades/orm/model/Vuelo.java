@@ -78,6 +78,11 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
   public void setAzafatas(Set<Azafata> azafatas) {
     this.azafatas = azafatas;
   }
+
+  public void addAzafata(Azafata azafata) {
+    this.azafatas.add(azafata);
+    azafata.setVuelo(this);
+  }
   
   // PROPIEDADES
   @Transient
