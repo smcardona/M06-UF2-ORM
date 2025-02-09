@@ -17,12 +17,13 @@ import com.accesadades.orm.util.Paginator;
 import com.accesadades.orm.util.QuickIO;
 import com.accesadades.orm.util.UtilString;
 import com.accesadades.orm.util.exceptions.CancelCommandException;
+import com.accesadades.orm.util.exceptions.DatabaseException;
 import com.accesadades.orm.util.exceptions.ExitException;
 
 
 public class Main {
 
-  public static QuickIO io = new QuickIO(new String[]{ "cancel" }, new String[]{ "exit" });
+  public static QuickIO io = new QuickIO(new String[]{ "cancel" }, new String[]{ ".exit" });
 
   private static final Class<?>[] ENTITATS = {
     Avion.class, Aeropuerto.class, Azafata.class, Vuelo.class
@@ -31,23 +32,36 @@ public class Main {
 
   public static void main(String[] args) {
 
-    System.out.println("PROBANDO PROGRAMA");
+    while (true) {
+      try {
+        menuOptions();
+      } 
+      catch (CancelCommandException e) {
+        System.out.println("Comanda cancelada");
+      } 
+      catch(ExitException e) {
+        System.out.println("Sortint del programa");
+        break;
+      } 
+      catch (DatabaseException e) {
+        Color.RED.println("Error intentan fer acció a la base de dades: "+e.getLocalizedMessage());
+      } 
+      catch (Exception e) {
+        Color.RED.println("Error inesperat al programa !");
+        Color.RED.println(e.getLocalizedMessage());
+        break;
+      }
 
-    try {
-      fillProperties(new Azafata());
-      fillProperties(new Avion());
-      fillProperties(new Aeropuerto());
-      fillProperties(new Vuelo());
-    } catch (Exception e) {
-      e.printStackTrace();
+
     }
+
 
     //DAO.finishEverything();
 
   }
 
     
-  public static void menuOptions() throws Exception {
+  public static void menuOptions() throws ExitException, CancelCommandException  {
 
     String message = """
       ==================
@@ -61,6 +75,7 @@ public class Main {
       4. MODIFICAR DADES (UPDATE)
       5. ELIMINAR DADES (DELETE)
       6. SORTIR
+      (cancel, .exit per cancelar comandes o sortir del programa)
       """;
       
       System.out.println(message);
@@ -70,7 +85,7 @@ public class Main {
 
       switch(opcio) {
         case 1:
-          // TODO: datos demo
+          loadDemoData();
           break;
 
         
@@ -112,22 +127,22 @@ public class Main {
 
     while (true) {
       System.out.println("Per quin camp vols filtrar la selecció ?");
-      System.out.println(String.format("1. ID de %s%n", entName));
+      System.out.println(String.format("1. ID de %s", entName));
+      System.out.println(String.format("2. Mostrar tots els valors de %s", entName));
+      // Muestra opciones de campos
+      for (int i = 3; i < props.length +3; i++) {
+        Property<?> p = props[i-3];
   
-      for (int i = 2; i < props.length +2; i++) {
-        Property<?> p = props[i-2];
-  
-        System.out.println(String.format(
-          "%d. %s de %s%n", i, p.displayName, entName));
+        System.out.println(String.format("%d. %s de %s", i, p.displayName, entName));
       }
-  
+      // pilla opcion valida
       int choice = io.processAndReturn("Opció > ", val -> {
         int c = Integer.parseInt(val);
-        if (c < 1 || c >= props.length+2) throw new IllegalArgumentException("Opció invalida");
+        if (c < 1 || c >= props.length+3) throw new IllegalArgumentException("Opció invalida");
         return c;
       });
   
-  
+      // Si es 1 = por id
       if (choice == 1) {
         int id = io.processAndReturn("ID >> ", Integer::parseInt);
         
@@ -138,8 +153,21 @@ public class Main {
         else 
           System.out.println(result.toString());
       }
+      // Si es 2 = sin filtrar
+      else if(choice == 2) {
+        List<?> results = DAO.with(type).getAll();
+        if (results.size() == 0) 
+          Color.RED.println("Cap valor per l'entitat "+entName);
+  
+        else {
+          System.out.println(results.size() +" coincidencies");
+          for (Object item: results) 
+            System.out.println(item.toString());
+        }
+      }
+      // Si es otro, por campo
       else {
-        Property<?> p = props[choice-2]; 
+        Property<?> p = props[choice-3]; 
         String value = io.getInputWithPrompt(p.displayName+" >> ");
   
         List<?> results = DAO.with(type).filterBy(p, value);
@@ -154,7 +182,7 @@ public class Main {
   
       }
   
-      
+      // volver a consultar?
       boolean more = io.processAndReturn("Vols continuar buscant instancies de "+entName + " ? ",
         UtilString::answerToBool);
   
@@ -234,7 +262,7 @@ public class Main {
 
           // Comprobar que está seguro
 
-          System.out.println("Estas segur que vols cancel·lar aquest comand? Es perdran els valors introduits per: "+
+          Color.YEL.println("Estas segur que vols cancel·lar aquest comand? Es perdran els valors introduits per: "+
             instance.getClass().getSimpleName());
 
           if (io.processAndReturn("Cancel·lar (si / no) :", UtilString::answerToBool)) 
@@ -250,8 +278,7 @@ public class Main {
   }
 
   // Funcion que genera una instancia o la obtiene de un listado en la base de datos
-  public static PropertyProvider genOrGetInstanceFrom(Class<?> type) 
-    throws ExitException, CancelCommandException {
+  public static PropertyProvider genOrGetInstanceFrom(Class<?> type) throws ExitException, CancelCommandException {
 
     if (!PropertyProvider.class.isAssignableFrom(type)) {
       throw new RuntimeException("La classe no implementa propietats: "+type.getSimpleName());
@@ -313,7 +340,7 @@ public class Main {
 
   }
 
-  public static void menuDelete() throws Exception {
+  public static void menuDelete() throws ExitException, CancelCommandException  {
 
     Class<?> type = menuSelectType();
     String entName = type.getSimpleName();
@@ -371,8 +398,8 @@ public class Main {
     System.out.println();
     System.out.println("De quina entitat vols fer aquesta operació ?");
 
-    for (int i = 1; i <= ENTITATS.length; i++) {
-      System.out.printf("%d. %s%n", i, ENTITATS[i].getSimpleName());
+    for (int i = 1; i < ENTITATS.length+1; i++) {
+      System.out.printf("%d. %s%n", i, ENTITATS[i-1].getSimpleName());
     }
 
     int choice = io.processAndReturn("Opció > ", val -> {
@@ -410,6 +437,60 @@ public class Main {
     }
     System.out.print("\033[H\033[2J");
     System.out.flush();
+  }
+
+
+  public static void loadDemoData() throws DatabaseException {
+    // Create Aeropuertos
+    Aeropuerto aeropuerto1 = new Aeropuerto("Barcelona");
+    Aeropuerto aeropuerto2 = new Aeropuerto("Madrid");
+    Aeropuerto aeropuerto3 = new Aeropuerto("Valencia");
+
+    DAO.with(Aeropuerto.class).save(aeropuerto1);
+    DAO.with(Aeropuerto.class).save(aeropuerto2);
+    DAO.with(Aeropuerto.class).save(aeropuerto3);
+
+    // Create Aviones
+    Avion avion1 = new Avion("Boeing 737", 180);
+    Avion avion2 = new Avion("Airbus A320", 160);
+    Avion avion3 = new Avion("Boeing 747", 400);
+    Avion avion4 = new Avion("Airbus A380", 500);
+    Avion avion5 = new Avion("Embraer 190", 100);
+
+    DAO.with(Avion.class).save(avion1);
+    DAO.with(Avion.class).save(avion2);
+    DAO.with(Avion.class).save(avion3);
+    DAO.with(Avion.class).save(avion4);
+    DAO.with(Avion.class).save(avion5);
+
+    // Create Azafatas
+    Azafata azafata1 = new Azafata("Maria", "12345678A", "600123456", "@maria");
+    Azafata azafata2 = new Azafata("Laura", "87654321B", "600654321", "@laura");
+    Azafata azafata3 = new Azafata("Ana", "11223344C", "600112233", "@ana");
+
+    DAO.with(Azafata.class).save(azafata1);
+    DAO.with(Azafata.class).save(azafata2);
+    DAO.with(Azafata.class).save(azafata3);
+
+    // Create Vuelos
+    Vuelo vuelo1 = new Vuelo();
+    vuelo1.setOrigen(aeropuerto1);
+    vuelo1.setDestino(aeropuerto2);
+    vuelo1.getAvion().add(avion1);
+    vuelo1.getAvion().add(avion2);
+    vuelo1.getAzafatas().add(azafata1);
+    vuelo1.getAzafatas().add(azafata2);
+
+    Vuelo vuelo2 = new Vuelo();
+    vuelo2.setOrigen(aeropuerto2);
+    vuelo2.setDestino(aeropuerto3);
+    vuelo2.getAvion().add(avion3);
+    vuelo2.getAvion().add(avion4);
+    vuelo2.getAzafatas().add(azafata2);
+    vuelo2.getAzafatas().add(azafata3);
+
+    DAO.with(Vuelo.class).save(vuelo1);
+    DAO.with(Vuelo.class).save(vuelo2);
   }
 
 }

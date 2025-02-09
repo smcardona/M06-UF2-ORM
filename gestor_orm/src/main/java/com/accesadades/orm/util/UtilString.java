@@ -39,6 +39,17 @@ public class UtilString {
     return isInteger;
   }
 
+  /**
+   * Verifies that a string is not only spaces and has at least 4 characters.
+   * @param text String to check
+   * @return true if valid, false otherwise
+   */
+  public static boolean isValidString(String text) {
+    if (text == null) return false;
+    text = normalizeSpace(text);
+    return text.length() >= 4;
+  }
+
   private static final List<String> POSITIVE_KEYWORDS = Arrays.asList(new String[] {
     "s", "si", "sí", "bueno",
     "y", "yes", "ok"

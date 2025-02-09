@@ -99,7 +99,15 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
   public Property<?>[] getEditableProperties() { return editableProperties; }
   public Property<?>[] getProperties() { return properties; }
 
-
-  
+  @Override
+  public String toString() {
+    return "Vuelo{" +
+            "id=" + id +
+            ", origen='" + origen.getAbbreviatedCode() + '\'' +
+            ", destino='" + destino.getAbbreviatedCode() + '\'' +
+            ", aviones=" + aviones.size() +
+            ", azafatas=" + azafatas.size() +
+            '}';
+  }
   
 }

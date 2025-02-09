@@ -2,6 +2,8 @@ package com.accesadades.orm.model;
 
 import java.io.Serializable;
 
+import com.accesadades.orm.util.UtilString;
+
 import jakarta.persistence.Transient;
 
 // clase mapeada con hbm
@@ -28,11 +30,24 @@ public class Avion implements Serializable, Property.PropertyProvider {
   }
 
   public void setModelo(String modelo) {
+    modelo = UtilString.normalizeSpace(modelo);
+    if (!UtilString.isValidString(modelo)) {
+        throw new IllegalArgumentException("El model ha de tenir almenys 4 caràcters.");
+    }
     this.modelo = modelo;
   }
 
   public void setCapacidad(int capacidad) {
     this.capacidad = capacidad;
+  }
+
+  @Override
+  public String toString() {
+    return "Avion{" +
+            "id=" + id +
+            ", modelo='" + modelo + '\'' +
+            ", capacidad=" + capacidad +
+            '}';
   }
 
   
