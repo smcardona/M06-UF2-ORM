@@ -62,7 +62,7 @@ public class Avion implements Serializable, Property.PropertyProvider {
 
   @Transient
   private final Property<?>[] properties = {
-    editableProperties[0] // solo para filtrado, modelo
+    //editableProperties[0] // solo para filtrado, modelo
   };
 
   

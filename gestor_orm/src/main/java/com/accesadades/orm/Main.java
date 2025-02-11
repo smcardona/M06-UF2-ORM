@@ -3,8 +3,11 @@ package com.accesadades.orm;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.hibernate.exception.ConstraintViolationException;
 
 import com.accesadades.orm.model.Aeropuerto;
 import com.accesadades.orm.model.Avion;
@@ -47,14 +50,22 @@ public class Main {
         Color.RED.println("Error intentan fer acció a la base de dades: "+e.getLocalizedMessage());
       } 
       catch (Exception e) {
-        Color.RED.println("Error inesperat al programa !");
+        Color.RED.println("\n\rError inesperat al programa !");
         Color.RED.println(e.getLocalizedMessage());
-        break;
+        return;
       }
 
     }
 
-    //DAO.finishEverything();
+
+    try {
+      boolean erase = io.processAndReturn("Vols esborrar la base de dades? ", UtilString::answerToBool);
+      if (erase) DAO.finishEverything();
+      else DAO.endSession();
+    } catch (Exception e) {
+      Color.CYA.println("Sortint del programa definitivament");
+    }
+
 
   }
 
@@ -166,14 +177,17 @@ public class Main {
       // Si es otro, por campo
       else {
         Property<?> p = props[choice-3]; 
-        String value = io.getInputWithPrompt(p.displayName+" >> ");
+        String value = '%'+ io.getInputWithPrompt(p.displayName+" >> ") + '%';
   
-        List<?> results = DAO.with(type).filterBy(p, value);
+        @SuppressWarnings("unchecked")
+        List<?> results = DAO.with(type).filterBy((Property<String>) p, value);
         if (results.size() == 0) 
           Color.RED.println("Cap coincidencia amb aquest "+p.displayName);
   
         else {
-          System.out.println(results.size() +" coincidencies");
+          // Query innecesaria pero la ejecuto para usar el query.uniqueResult()
+          long coincidencias = DAO.with(type).count();
+          System.out.println(coincidencias +" coincidencies");
           for (Object item: results) 
             System.out.println(item.toString());
         }
@@ -191,6 +205,7 @@ public class Main {
   }
 
   // Funcion que setea las propiedades de un objeto
+  @SuppressWarnings("unchecked")
   public static void fillProperties(PropertyProvider instance, boolean isNewInstance) throws ExitException, CancelCommandException {
 
     // instance puede ser un new o un getReference
@@ -205,8 +220,15 @@ public class Main {
 
           //* Si es otro objecto con propiedades
           if (PropertyProvider.class.isAssignableFrom((Class<?>) type)) {
+
+            if (!isNewInstance) {
+              boolean modify = io.processAndReturn(prop.name + " (Vols modificar aquest camp?) ", UtilString::answerToBool);
+              if (!modify) break;
+            }
+
             // funcion larga pero util
             Object value = genOrGetInstanceFrom(type);
+            
 
             if (value == null && prop.isRequired() && isNewInstance) {
               Color.RED.println("Aquest camp es requerit !!!");
@@ -219,13 +241,21 @@ public class Main {
           }
           //* Si es un set de objetos seguramente PropertyProviders
           else if (Set.class.isAssignableFrom((Class<?>) type)) {
+
+            if (!isNewInstance) {
+              boolean modify = io.processAndReturn(prop.name + " (Vols modificar aquest camp?) ", UtilString::answerToBool);
+              if (!modify) break;
+            }
+
             // movida extraña para pillar el tipo del generico en el Set
             Type genericType = ((ParameterizedType) instance.getClass().getDeclaredField(prop.name).getGenericType()).getActualTypeArguments()[0];
             //* POR FIN, EL TIPO DE ELEMENTOS QUE CONTIENE EL SET
             Class<?> genericClass = (Class<?>) genericType;
             
-            @SuppressWarnings("unchecked")
-            Set<Object> set = (Set<Object>) prop.get();
+            Set<Object> set;
+            boolean add = false;
+            if (!isNewInstance) add = io.processAndReturn(prop.name + " : Vols afegir o iniciar una llista nova? (si -> afegir) ", UtilString::answerToBool);
+            set = add ? (Set<Object>) prop.get() : new HashSet<>();
 
             // Rellena el set de items
             boolean addMore;
@@ -336,7 +366,14 @@ public class Main {
         continue;
       }
 
-      fillProperties(instance, false);
+      try {
+        fillProperties(instance, false);
+        DAO.with(type).update(instance);
+      } catch (ConstraintViolationException e) {
+        Color.RED.println("Un dels camps es inválid: ");
+        Color.RED.println(e.getCause());
+        continue;
+      }
 
       System.out.println("Objecte modificat correctament!");
       System.out.println(instance.toString());
@@ -382,7 +419,6 @@ public class Main {
         DAO.with(type).remove(instance);
 
         System.out.println("Objecte eliminat correctament!");
-        System.out.println(instance.toString());
 
         boolean more = io.processAndReturn("Vols continuar eliminant instancies de "+entName + " ? ",
           UtilString::answerToBool);
@@ -406,7 +442,13 @@ public class Main {
       
       PropertyProvider instance = instanceFromType(type);
       fillProperties(instance, true);
-      DAO.with(type).save(instance);
+      try {
+        DAO.with(type).save(instance);
+      } catch (ConstraintViolationException e) {
+        Color.RED.println("Un dels camps es inválid: ");
+        Color.RED.println(e.getCause());
+        continue;
+      }
 
       System.out.println("Objecte agregat correctament!");
       System.out.println(instance.toString());
@@ -416,7 +458,6 @@ public class Main {
         UtilString::answerToBool);
 
       if (!more) break;
-
     }
   }
 
@@ -469,55 +510,64 @@ public class Main {
 
   public static void loadDemoData() throws DatabaseException {
     // Create Aeropuertos
-    Aeropuerto aeropuerto1 = new Aeropuerto("Barcelona");
-    Aeropuerto aeropuerto2 = new Aeropuerto("Madrid");
-    Aeropuerto aeropuerto3 = new Aeropuerto("Valencia");
+    try {
+      
+      Aeropuerto aeropuerto1 = new Aeropuerto("Barcelona");
+      Aeropuerto aeropuerto2 = new Aeropuerto("Madrid");
+      Aeropuerto aeropuerto3 = new Aeropuerto("Valencia");
 
-    DAO.with(Aeropuerto.class).save(aeropuerto1);
-    DAO.with(Aeropuerto.class).save(aeropuerto2);
-    DAO.with(Aeropuerto.class).save(aeropuerto3);
+      DAO.with(Aeropuerto.class).save(aeropuerto1);
+      DAO.with(Aeropuerto.class).save(aeropuerto2);
+      DAO.with(Aeropuerto.class).save(aeropuerto3);
 
-    // Create Aviones
-    Avion avion1 = new Avion("Boeing 737", 180);
-    Avion avion2 = new Avion("Airbus A320", 160);
-    Avion avion3 = new Avion("Boeing 747", 400);
-    Avion avion4 = new Avion("Airbus A380", 500);
-    Avion avion5 = new Avion("Embraer 190", 100);
+      // Create Aviones
+      Avion avion1 = new Avion("Boeing 737", 180);
+      Avion avion2 = new Avion("Airbus A320", 160);
+      Avion avion3 = new Avion("Boeing 747", 400);
+      Avion avion4 = new Avion("Airbus A380", 500);
+      Avion avion5 = new Avion("Embraer 190", 100);
 
-    DAO.with(Avion.class).save(avion1);
-    DAO.with(Avion.class).save(avion2);
-    DAO.with(Avion.class).save(avion3);
-    DAO.with(Avion.class).save(avion4);
-    DAO.with(Avion.class).save(avion5);
+      DAO.with(Avion.class).save(avion1);
+      DAO.with(Avion.class).save(avion2);
+      DAO.with(Avion.class).save(avion3);
+      DAO.with(Avion.class).save(avion4);
+      DAO.with(Avion.class).save(avion5);
 
-    // Create Azafatas
-    Azafata azafata1 = new Azafata("Maria", "12345678A", "600123456", "@maria");
-    Azafata azafata2 = new Azafata("Laura", "87654321B", "600654321", "@laura");
-    Azafata azafata3 = new Azafata("Ana", "11223344C", "600112233", "@ana");
+      // Create Azafatas
+      Azafata azafata1 = new Azafata("Maria", "12345678A", "600123456", "@maria");
+      Azafata azafata2 = new Azafata("Laura", "87654321B", "600654321", "@laura");
+      Azafata azafata3 = new Azafata("Ana", "11223344C", "600112233", "@ana");
 
-    DAO.with(Azafata.class).save(azafata1);
-    DAO.with(Azafata.class).save(azafata2);
-    DAO.with(Azafata.class).save(azafata3);
+      DAO.with(Azafata.class).save(azafata1);
+      DAO.with(Azafata.class).save(azafata2);
+      DAO.with(Azafata.class).save(azafata3);
 
-    // Create Vuelos
-    Vuelo vuelo1 = new Vuelo();
-    vuelo1.setOrigen(aeropuerto1);
-    vuelo1.setDestino(aeropuerto2);
-    vuelo1.getAvion().add(avion1);
-    vuelo1.getAvion().add(avion2);
-    vuelo1.addAzafata(azafata1);
-    vuelo1.addAzafata(azafata2);
+      // Create Vuelos
+      Vuelo vuelo1 = new Vuelo();
+      vuelo1.setOrigen(aeropuerto1);
+      vuelo1.setDestino(aeropuerto2);
+      vuelo1.getAvion().add(avion1);
+      vuelo1.getAvion().add(avion2);
+      vuelo1.addAzafata(azafata1);
+      vuelo1.addAzafata(azafata2);
 
-    Vuelo vuelo2 = new Vuelo();
-    vuelo2.setOrigen(aeropuerto2);
-    vuelo2.setDestino(aeropuerto3);
-    vuelo2.getAvion().add(avion3);
-    vuelo2.getAvion().add(avion4);
-    vuelo2.addAzafata(azafata2);
-    vuelo2.addAzafata(azafata3);
+      Vuelo vuelo2 = new Vuelo();
+      vuelo2.setOrigen(aeropuerto2);
+      vuelo2.setDestino(aeropuerto3);
+      vuelo2.getAvion().add(avion3);
+      vuelo2.getAvion().add(avion4);
+      vuelo2.addAzafata(azafata2);
+      vuelo2.addAzafata(azafata3);
 
-    DAO.with(Vuelo.class).save(vuelo1);
-    DAO.with(Vuelo.class).save(vuelo2);
+      DAO.with(Vuelo.class).save(vuelo1);
+      DAO.with(Vuelo.class).save(vuelo2);
+
+      System.out.println("Totes les dades demo han sigut afegides correctament");
+      
+    } catch (Exception e) {
+      Color.YEL.println("Ha ocurrit un error al intentar guardar les dades");
+      Color.YEL.println(e.getMessage());
+    }
   }
 
 }

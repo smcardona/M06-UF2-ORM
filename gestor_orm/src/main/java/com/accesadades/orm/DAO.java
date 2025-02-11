@@ -20,7 +20,7 @@ public class DAO<T> {
 
     public final Class<T> type;
 
-    public DAO (Class<T> type) {
+    private DAO (Class<T> type) {
         if (factory == null) factory = HibernateUtil.getSessionFactory();
         if (session == null) session = factory.openSession();
         this.type = type;
@@ -46,15 +46,20 @@ public class DAO<T> {
         return query.list();
     }
 
+    public long count() {
+        Query<Long> query = session.createQuery("SELECT COUNT(*) FROM " + type.getSimpleName(), Long.class);
+        return query.uniqueResult();
+    }
+
     public void clearAll() {
         @SuppressWarnings("deprecation")
         Query<?> query = session.createQuery("DELETE FROM " + type.getSimpleName());
         executeAction(() -> query.executeUpdate());
     }
 
-    public List<T> filterBy(Property<?> field, Object value) {
+    public List<T> filterBy(Property<String> field, Object value) {
 
-        String hql = String.format("FROM %s WHERE %s = :val", 
+        String hql = String.format("FROM %s WHERE %s like :val", 
             type.getSimpleName(), 
             field.name);
 
@@ -94,13 +99,20 @@ public class DAO<T> {
     //! Funcion peligrosa: Hace que las demas instancias de DAO dejen de funcionar y directamente borra la DB
     @SuppressWarnings("deprecation")
     public static void finishEverything() {
-        if (session != null) {
-
-            session.beginTransaction();
-            session.createNativeQuery("DROP DATABASE aero").executeUpdate();
-            session.getTransaction().commit();
-
-            session.close();
+        if (session == null) {
+            session = HibernateUtil.getSessionFactory().openSession();
+        } 
+        Transaction tr = null;
+        try {
+            tr = session.beginTransaction();
+            session.createNativeQuery("DROP DATABASE IF EXISTS aero").executeUpdate();
+            tr.commit();
+            System.out.println("Base de dades eliminada");
+        } catch (Exception e) {
+            if (tr != null) tr.rollback();
+            System.err.println("Error intentar esborrar DB: " + e.getMessage());
+        } finally {
+            endSession();
         }
 
         factory = null;

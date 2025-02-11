@@ -1,6 +1,3 @@
 <configuration>
-    <logger name="org.hibernate" level="ERROR"/>
-    <logger name="org.hibernate.SQL" level="ERROR"/>
-    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="ERROR"/>
-    <logger name="org.mariadb.jdbc" level="ERROR"/>
+    <root level="OFF"/>
 </configuration>

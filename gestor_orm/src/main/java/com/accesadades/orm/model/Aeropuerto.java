@@ -21,7 +21,7 @@ public class Aeropuerto implements Serializable, Property.PropertyProvider {
   @Column
   private int id;
 
-  @Column
+  @Column(unique = true)
   private String ciudad;
 
   public Aeropuerto() {}

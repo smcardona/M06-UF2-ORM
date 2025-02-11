@@ -12,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PreRemove;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
@@ -28,17 +29,17 @@ public class Azafata implements Serializable, Property.PropertyProvider {
   @Column
   private String name;
 
-  @Column
+  @Column(unique = true)
   private String phone;
 
-  @Column
+  @Column(unique = true)
   private String passport;
 
-  @Column
+  @Column(unique = true)
   private String ig;
 
-  @ManyToOne(cascade=CascadeType.ALL)
-  @JoinColumn(name="vuelo")
+  @ManyToOne(cascade=CascadeType.PERSIST)
+  @JoinColumn(name="vuelo", nullable = true)
   private Vuelo vuelo;
 
   public Azafata() {}
@@ -97,6 +98,8 @@ public class Azafata implements Serializable, Property.PropertyProvider {
     this.vuelo = vuelo;
   }
 
+  public Vuelo getVuelo() { return vuelo; }
+
 
   @Override
   public String toString() {
@@ -122,7 +125,13 @@ public class Azafata implements Serializable, Property.PropertyProvider {
   private final Property<?>[] properties = {
     editableProperties[0], 
     editableProperties[1],
+    editableProperties[3]
   };
+
+  @PreRemove
+  public void preRemove() {
+    if (vuelo != null) vuelo.getAzafatas().remove(this);
+  }
 
   
   public Property<?>[] getEditableProperties() { return editableProperties; }

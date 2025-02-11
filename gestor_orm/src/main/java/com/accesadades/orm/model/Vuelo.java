@@ -16,6 +16,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PreRemove;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
@@ -29,17 +30,17 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
   private int id;
 
   // Aeropuerto origen
-  @ManyToOne(cascade=CascadeType.ALL)
+  @ManyToOne(cascade=CascadeType.PERSIST)
   @JoinColumn(name="origen")
   private Aeropuerto origen;
 
   // Aeropuerto destino
-  @ManyToOne(cascade=CascadeType.ALL)
+  @ManyToOne(cascade=CascadeType.PERSIST)
   @JoinColumn(name="destino")
   private Aeropuerto destino;
 
   // Aviones usados en este vuelo
-  @ManyToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY)
+  @ManyToMany(cascade=CascadeType.PERSIST, fetch=FetchType.LAZY)
   @JoinTable(
     name = "vuelo_avion",
     joinColumns = @JoinColumn(name = "vuelo_id"),
@@ -47,7 +48,7 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
   )
   private Set<Avion> aviones = new HashSet<>();
 
-  @OneToMany(mappedBy="vuelo", cascade=CascadeType.ALL, fetch=FetchType.LAZY)
+  @OneToMany(mappedBy="vuelo", cascade=CascadeType.PERSIST, fetch=FetchType.LAZY)
   private Set<Azafata> azafatas = new HashSet<>();
 
   public int getId() {
@@ -77,12 +78,17 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
 
   public void setAzafatas(Set<Azafata> azafatas) {
     this.azafatas = azafatas;
+
+    for (Azafata a: azafatas) {
+      a.setVuelo(this);
+    }
   }
 
   public void addAzafata(Azafata azafata) {
     this.azafatas.add(azafata);
     azafata.setVuelo(this);
   }
+
   
   // PROPIEDADES
   @Transient
@@ -93,11 +99,11 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
     new Property<>("aviones", "avions", this::setAviones, this::getAvion, getClass()),
     new Property<>("azafatas", "hostesses", this::setAzafatas, this::getAzafatas, getClass())
   };
-  // solo para filtrado
+  // solo para filtrado por Strings
   @Transient
   private final Property<?>[] properties = {
-    editableProperties[0], 
-    editableProperties[1]
+/*     editableProperties[0], 
+    editableProperties[1] */
   };
 
   
@@ -113,6 +119,14 @@ public class Vuelo implements Serializable, Property.PropertyProvider {
             ", aviones=" + aviones.size() +
             ", azafatas=" + azafatas.size() +
             '}';
+  }
+
+
+  @PreRemove
+  public void preRemove() {
+    for (Azafata a: azafatas) {
+      a.setVuelo(null);
+    }
   }
   
 }
